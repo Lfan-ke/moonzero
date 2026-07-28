@@ -16,6 +16,29 @@ SECTIONS = [
     ("group", "group.mbt", "Route groups",
      "Group registers a set of moonapi routes under a shared path prefix, so "
      "related endpoints are declared without repeating the prefix."),
+    ("config", "config.mbt", "Typed config loading",
+     "Parse a JSON config string into a ServiceConf: a strict derived FromJson "
+     "path plus a lenient ServiceConf::from_json loader that fills omitted "
+     "fields from the new() defaults, the way go-zero's conf.Load applies "
+     ",optional/,default= tags."),
+    ("clock", "clock.mbt", "Clock abstraction",
+     "A millisecond time source injected into the resilience middlewares so "
+     "their timing is a pure function of an explicit clock; ManualClock drives "
+     "them deterministically in tests."),
+    ("ratelimit", "ratelimit.mbt", "Rate limiting",
+     "A token-bucket limiter (pure counter over the clock) and the rate_limit "
+     "middleware, which answers 429 Too Many Requests when the bucket is empty."),
+    ("breaker", "breaker.mbt", "Circuit breaker",
+     "A closed/open/half-open breaker state machine and the breaker middleware, "
+     "which trips after K consecutive failures and fails fast with 503 while open."),
+    ("limits", "limits.mbt", "Timeout & max-bytes",
+     "A request Deadline plus the timeout middleware (deadline-enforced on the "
+     "response path; preemptive cancel is the async boundary) and maxbytes, "
+     "which rejects over-limit Content-Length with 413."),
+    ("logging", "logging.mbt", "Structured logging",
+     "RequestLog captures typed access-log fields (method, path, status, "
+     "duration, request-id, client-ip, user-agent) and renders one JSON line "
+     "per request; the structured_logging middleware emits it, timed on the clock."),
 ]
 
 KIND = {"struct": "struct", "enum": "enum", "fn": "fn", "type": "type", "let": "let"}

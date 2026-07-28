@@ -43,9 +43,29 @@ server.describe()        // "greet listening on 127.0.0.1:8888"
 
 Verified across all backends (`wasm`, `wasm-gc`, `js`, `native`) in CI, 0 warnings under `--deny-warn`.
 
+## Resilience middleware
+
+Beyond the base onion (logging, recovery, CORS, request-id), moonzero ships go-zero's resilience set, each modelled as a pure decision core over an injected [`Clock`](./clock.mbt) so its timing is exactly testable:
+
+```moonbit
+let clock = @moonzero.Clock::new(() => now_ms())     // real time at the async edge
+let server = @moonzero.Server::new(conf, app)
+  .use_(@moonzero.maxbytes(1 << 20))                                   // 413 over 1 MiB
+  .use_(@moonzero.rate_limit(@moonzero.TokenBucket::new(100.0), clock))// 429 when empty
+  .use_(@moonzero.breaker(@moonzero.Breaker::new(), clock))            // 503 while open
+  .use_(@moonzero.timeout(3000L, clock))                              // deadline
+  .use_(@moonzero.structured_logging(clock))                          // one JSON line/req
+```
+
+- **`rate_limit`** — a [`TokenBucket`](./ratelimit.mbt): admits a burst, refills continuously, answers `429` when empty.
+- **`breaker`** — a [`Breaker`](./breaker.mbt) closed/open/half-open state machine: trips after K consecutive failures, fails fast with `503`, then admits half-open probes to test recovery.
+- **`timeout`** — a [`Deadline`](./limits.mbt) enforced on the response path. Preemptively aborting a hung handler needs racing it against a timer (`@async.any`) under the native runtime; that race is wired at the async server edge, the deadline core is portable and tested.
+- **`maxbytes`** — rejects a request whose declared `Content-Length` exceeds the limit with `413`.
+- **`structured_logging`** — a [`RequestLog`](./logging.mbt) rendered as one JSON line per request (method, path, status, duration, request-id, client-ip, user-agent).
+
 ## Roadmap (transliterating go-zero)
 
-Config (typed, with timeout + log level) + service assembly + a middleware onion (logging, recovery, CORS, request-id) + route groups are here. Next, feature-by-feature: typed config loading (YAML/JSON), more middleware (timeout, rate-limit, auth), structured logging and metrics, RPC service groups over `moonrpc`, and service discovery / registry — plus `moonctl`-driven scaffolding of a full `moonzero` service from a spec.
+Typed config (JSON loading with defaults, timeout + log level) + service assembly + the base middleware onion (logging, recovery, CORS, request-id) + the resilience set (timeout, rate-limit, breaker, maxbytes, structured logging) + route groups are here. Next, feature-by-feature: YAML config loading, auth (JWT) + metrics/tracing/prometheus middleware, RPC service groups over `moonrpc`, and service discovery / registry — plus `moonctl`-driven scaffolding of a full `moonzero` service from a spec.
 
 ## License
 

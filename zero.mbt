@@ -41,7 +41,7 @@ pub(all) struct ServiceConf {
   port : Int
   timeout_ms : Int
   log_level : LogLevel
-}
+} derive(FromJson, Eq)
 
 ///|
 /// Build a config with sensible defaults (`0.0.0.0:8888`, 3s timeout, `info`).
