@@ -25,10 +25,17 @@ flowchart LR
 
 ```moonbit
 let app = @moonapi.App::new()
-app.get("/ping", _ctx => @moonapi.text(200, "pong"))
+let api = @moonzero.Group::new(app, "/api/v1")     // prefix a set of routes
+api.get("/ping", _ctx => @moonapi.text(200, "pong"))
 
-let conf = @moonzero.ServiceConf::new(name="greet", host="127.0.0.1", port=8888)
-let server = @moonzero.Server::new(conf, app).use_(@moonzero.logging)
+let conf = @moonzero.ServiceConf::new(
+  name="greet", host="127.0.0.1", port=8888, timeout_ms=3000, log_level=Info,
+)
+let server = @moonzero.Server::new(conf, app)
+  .use_(@moonzero.cors(@moonzero.CorsConf::new()))   // Access-Control-* headers
+  .use_(@moonzero.request_id())                      // x-request-id per request
+  .use_(@moonzero.recovery)                           // 500 instead of a panic
+  .use_(@moonzero.logging)
 
 server.describe()        // "greet listening on 127.0.0.1:8888"
 @mooncat.serve(server.to_asgi(), host=conf.host, port=conf.port)   // run it (native)
@@ -38,7 +45,7 @@ Verified across all backends (`wasm`, `wasm-gc`, `js`, `native`) in CI, 0 warnin
 
 ## Roadmap (transliterating go-zero)
 
-Config + service assembly + a middleware onion are here. Next, feature-by-feature: typed config loading (YAML/JSON), a richer middleware set (recovery, CORS, timeout, rate-limit, auth), structured logging and metrics, RPC service groups over `moonrpc`, and service discovery / registry — plus `moonctl`-driven scaffolding of a full `moonzero` service from a spec.
+Config (typed, with timeout + log level) + service assembly + a middleware onion (logging, recovery, CORS, request-id) + route groups are here. Next, feature-by-feature: typed config loading (YAML/JSON), more middleware (timeout, rate-limit, auth), structured logging and metrics, RPC service groups over `moonrpc`, and service discovery / registry — plus `moonctl`-driven scaffolding of a full `moonzero` service from a spec.
 
 ## License
 

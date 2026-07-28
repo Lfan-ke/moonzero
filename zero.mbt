@@ -1,19 +1,58 @@
 ///|
-/// Service configuration (← go-zero's `ServiceConf`): a name and a bind address.
+/// Log verbosity (← go-zero's `LogConf.Level`), ordered from most to least
+/// verbose. `Compare` follows that order so thresholds can be tested directly.
+pub(all) enum LogLevel {
+  Debug
+  Info
+  Error
+  Severe
+} derive(Eq, Compare, Debug)
+
+///|
+/// The canonical lowercase name go-zero uses on the wire.
+pub fn LogLevel::to_string(self : LogLevel) -> String {
+  match self {
+    Debug => "debug"
+    Info => "info"
+    Error => "error"
+    Severe => "severe"
+  }
+}
+
+///|
+/// Parse a level name, falling back to `Info` for anything unrecognised — the
+/// same lenient default go-zero applies to a missing/empty level.
+pub fn LogLevel::parse(s : String) -> LogLevel {
+  match s {
+    "debug" => Debug
+    "error" => Error
+    "severe" => Severe
+    _ => Info
+  }
+}
+
+///|
+/// Service configuration (← go-zero's `ServiceConf`): the service name, its bind
+/// address, a request timeout, and the log level. `timeout_ms` is the per-request
+/// budget in milliseconds; `0` disables the deadline.
 pub(all) struct ServiceConf {
   name : String
   host : String
   port : Int
+  timeout_ms : Int
+  log_level : LogLevel
 }
 
 ///|
-/// Build a config with sensible defaults (`0.0.0.0:8888`).
+/// Build a config with sensible defaults (`0.0.0.0:8888`, 3s timeout, `info`).
 pub fn ServiceConf::new(
   name? : String = "app",
   host? : String = "0.0.0.0",
   port? : Int = 8888,
+  timeout_ms? : Int = 3000,
+  log_level? : LogLevel = Info,
 ) -> ServiceConf {
-  { name, host, port }
+  { name, host, port, timeout_ms, log_level }
 }
 
 ///|

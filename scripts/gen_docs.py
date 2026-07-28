@@ -7,8 +7,15 @@ import re, html, pathlib
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SECTIONS = [
     ("service", "zero.mbt", "Service assembly",
-     "ServiceConf + Server tie a moonapi App and a middleware onion into a "
-     "runnable AsgiApp; logging is a built-in middleware. Served by mooncat."),
+     "ServiceConf (typed config: name, host, port, timeout, log level) + Server "
+     "tie a moonapi App and a middleware onion into a runnable AsgiApp; logging "
+     "is a built-in middleware. Served by mooncat."),
+    ("middleware", "middleware.mbt", "Middleware set",
+     "The onion layers that wrap the app: recovery (500 instead of a panic), "
+     "cors (Access-Control-* headers), and request_id (x-request-id per request)."),
+    ("group", "group.mbt", "Route groups",
+     "Group registers a set of moonapi routes under a shared path prefix, so "
+     "related endpoints are declared without repeating the prefix."),
 ]
 
 KIND = {"struct": "struct", "enum": "enum", "fn": "fn", "type": "type", "let": "let"}
@@ -204,7 +211,7 @@ def main():
             'Backend-agnostic; served by mooncat.</p>'
             '<div class="badges">'
             '<a href="https://github.com/Lfan-ke/moonzero/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Lfan-ke/moonzero/ci.yml?branch=master&label=CI&logo=github"></a>'
-            '<img alt="tests" src="https://img.shields.io/badge/tests-2%20passing%20%C3%974%20backends-0ca678">'
+            '<img alt="tests" src="https://img.shields.io/badge/tests-12%20passing%20%C3%974%20backends-0ca678">'
             '<a href="https://github.com/Lfan-ke/moonzero"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-source-24292f?logo=github"></a>'
             '<img alt="license" src="https://img.shields.io/badge/license-Apache--2.0-6d5efc"></div>'
             '<div class="install"><span class="prompt">$</span><code>moon add Lfan-ke/moonzero</code>'
