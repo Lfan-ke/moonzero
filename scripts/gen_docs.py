@@ -41,6 +41,23 @@ SECTIONS = [
      "An RpcServer (config-driven) registers moonrpc Method handlers by gRPC "
      "path and dispatches unary calls, returning Unimplemented for unknown "
      "methods; RpcGroup registers a set of methods under one package.Service."),
+    ("zrpc", "zrpc.mbt", "zRPC over the h2c transport",
+     "RpcServer::to_h2 exposes the registered handlers as a moonrpc H2Server, "
+     "and RpcChannel drives a real unary call over that transport: HPACK-coded "
+     "HEADERS, a length-prefixed DATA frame, and the grpc-status trailer read "
+     "back off the reply."),
+    ("registry", "registry.mbt", "Service registry & discovery",
+     "An InMemoryRegistry (etcd-shaped: service -> instance -> endpoint with a "
+     "store revision) plus RoundRobin/pick_first balancers and resolve_one, the "
+     "resolve-then-balance step a client runs before a call."),
+    ("metrics", "metrics.mbt", "Metrics",
+     "A CounterVec of per-method/route/status request tallies and a cumulative "
+     "latency Histogram (Prometheus le buckets), wired by the metrics middleware "
+     "that times each request on the clock."),
+    ("tracing", "tracing.mbt", "Trace-id propagation",
+     "W3C traceparent parsing and formatting with SplitMix64-derived trace/span "
+     "ids, and the tracing middleware that continues an inbound trace or starts a "
+     "new one and stamps traceparent + x-trace-id onto the response."),
     ("clock", "clock.mbt", "Clock abstraction",
      "A millisecond time source injected into the resilience middlewares so "
      "their timing is a pure function of an explicit clock; ManualClock drives "

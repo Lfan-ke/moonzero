@@ -63,7 +63,7 @@ let server = @moonzero.Server::new(conf, app)
 - **`maxbytes`** — rejects a request whose declared `Content-Length` exceeds the limit with `413`.
 - **`structured_logging`** — a [`RequestLog`](./logging.mbt) rendered as one JSON line per request (method, path, status, duration, request-id, client-ip, user-agent).
 
-## Auth, YAML config, and zRPC groups
+## Auth, YAML config, and zRPC over the h2c transport
 
 ```moonbit
 // JWT HS256 — self-built SHA-256/HMAC (verified against NIST/RFC vectors)
@@ -73,24 +73,48 @@ let token = @moonzero.jwt_sign(
 )
 let server = @moonzero.Server::new(conf, app)
   .use_(@moonzero.auth("topsecret", clock))   // 401 unless a valid Bearer JWT
+  .use_(@moonzero.tracing())                  // W3C traceparent in/out
+  .use_(@moonzero.metrics(m, clock))          // request counter + latency histogram
 
 // YAML config — the etc/*.yaml format go-zero ships, same lenient defaults as JSON
 let conf = @moonzero.ServiceConf::from_yaml("name: greet\nport: 9000\nlog_level: error\n")
 
-// zRPC service groups over moonrpc — register Method handlers, dispatch by gRPC path
+// A real unary zRPC call over moonrpc's h2c transport
 let rpc = @moonzero.RpcServer::new(@moonzero.RpcServerConf::new(name="greeter", port=9090))
 rpc.group("hello.Greeter").register("SayHello", req => handle(req))
-rpc.dispatch("/hello.Greeter/SayHello", request)   // Ok(bytes) | Err(Unimplemented)
+let ch = @moonzero.RpcChannel::connect(rpc)
+ch.call("/hello.Greeter/SayHello", request)    // Ok(reply) | Err(status)
 ```
 
 - **`jwt_sign` / `jwt_verify`** — compact HS256 tokens on a [self-built SHA-256 + HMAC-SHA256](./crypto.mbt), signatures compared in constant time, `exp`/`nbf` enforced, and the `alg:none` downgrade refused. Interop-verified against the canonical jwt.io token.
 - **`auth`** — the [middleware](./auth.mbt) that requires `Authorization: Bearer <jwt>` and answers `401` for an absent, malformed, tampered, or expired token.
 - **`ServiceConf::from_yaml`** — a [minimal-subset YAML parser](./yaml.mbt) (block maps, nesting, sequences, typed scalars, comments) feeding the same field reader as the JSON loader, so both formats agree field-for-field.
-- **`RpcServer` / `RpcGroup`** — [config-driven zRPC groups](./rpc.mbt) that register [`moonrpc`](https://github.com/Lfan-ke/moonrpc) `Method` handlers by gRPC path and dispatch unary calls, returning `Unimplemented` for an unknown method.
+- **`RpcServer` / `RpcGroup`** — [config-driven zRPC groups](./rpc.mbt) that register [`moonrpc`](https://github.com/Lfan-ke/moonrpc) `Method` handlers by gRPC path.
+- **`RpcChannel`** — a [client over the h2c transport](./zrpc.mbt): `to_h2` turns the registered handlers into a `moonrpc` `H2Server`, and a `call` runs a real unary exchange through it — HPACK-coded HEADERS, a length-prefixed DATA frame, and the `grpc-status` trailer read back off the reply. A call to an unregistered path comes back `UNIMPLEMENTED`, the trailers-only response a gRPC server sends for an unknown method.
+
+## Discovery, metrics, tracing
+
+```moonbit
+// Service registry (etcd-shaped): register instances, resolve, balance
+let reg = @moonzero.InMemoryRegistry::new()
+reg.register("greeter", @moonzero.Endpoint::new("10.0.0.1", 9090))
+reg.register("greeter", @moonzero.Endpoint::new("10.0.0.2", 9090))
+let lb = @moonzero.RoundRobin::new()
+@moonzero.resolve_one(reg, "greeter", lb)      // Some(10.0.0.1:9090), then .2, cycling
+
+// Metrics read out for a /metrics scrape after serving
+let m = @moonzero.ServerMetrics::new()
+m.requests().value("GET /ping 200")            // request count for that label
+m.latency().mean()                             // mean request latency, ms
+```
+
+- **`InMemoryRegistry`** — a [service registry](./registry.mbt) shaped like go-zero's etcd `discov` store: a `service -> instance -> endpoint` map with a monotonic store revision a watcher can compare against. `RoundRobin` and `pick_first` balancers select an endpoint from a resolved set; an etcd- or consul-backed store with the same `resolve` shape drops in unchanged.
+- **`ServerMetrics`** — a [`CounterVec`](./metrics.mbt) of per-method/route/status request tallies and a cumulative latency `Histogram` (Prometheus `le` buckets, sum, count), driven by the `metrics` middleware that times each request on the clock.
+- **`tracing`** — [trace-id propagation](./tracing.mbt): continue an inbound W3C `traceparent` or start a new trace, mint a child span, and stamp `traceparent` + `x-trace-id` onto the response.
 
 ## Roadmap (transliterating go-zero)
 
-Typed config (JSON + YAML loading with defaults, timeout + log level) + service assembly + the base middleware onion (logging, recovery, CORS, request-id) + the resilience set (timeout, rate-limit, breaker, maxbytes, structured logging) + route groups + JWT auth + zRPC service groups are here. Next, feature-by-feature: metrics/tracing/prometheus middleware, the real h2 transport under `moonrpc` for live RPC, and service discovery / registry (etcd/consul) — plus `moonctl`-driven scaffolding of a full `moonzero` service from a spec.
+Typed config (JSON + YAML with defaults, timeout + log level) + service assembly + the base middleware onion (logging, recovery, CORS, request-id) + the resilience set (timeout, rate-limit, breaker, maxbytes, structured logging) + route groups + JWT auth + zRPC groups with a real h2c round-trip + a service registry with balancers + request metrics + trace-id propagation are here. Next: server/client streaming once `moonrpc` lands it, an etcd/consul-backed registry, and `moonctl`-driven scaffolding of a full `moonzero` service from a spec.
 
 ## License
 
