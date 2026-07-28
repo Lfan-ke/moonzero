@@ -1,0 +1,7 @@
+// moonzero (<- go-zero): config-driven assembly of a moonapi application with
+// middleware into a runnable moonasgi AsgiApp. Depends only on moonapi + moonasgi,
+// so it stays backend-agnostic; a server (mooncat) runs the produced app.
+import {
+  "Lfan-ke/moonapi",
+  "Lfan-ke/moonasgi",
+}
