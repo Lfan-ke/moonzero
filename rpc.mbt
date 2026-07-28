@@ -74,20 +74,41 @@ fn rpc_conf_of_object(
 pub type RpcHandler = (Bytes) -> Bytes
 
 ///|
+/// A server-streaming handler: one request message in, an ordered sequence of
+/// response messages out (each framed as its own length-prefixed gRPC message).
+/// Mirrors go-zero's `pb.XxxServer` server-streaming method, which writes to a
+/// `grpc.ServerStream` instead of returning one reply.
+pub type ServerStreamHandler = (Bytes) -> Array[Bytes]
+
+///|
+/// A client-streaming handler: every request message the client sends is
+/// collected, and after the client half-closes the handler returns one reply.
+pub type ClientStreamHandler = (Array[Bytes]) -> Bytes
+
+///|
 /// A zRPC server (← go-zero's `zrpc.Server`): config plus a registry mapping
 /// each method's gRPC `:path` (`/package.Service/Method`) to its handler.
 /// Handlers are registered via `@moonrpc.Method` descriptors — directly or
 /// through a `RpcGroup` — and dispatched by path, mirroring how go-zero registers
-/// service implementations on the underlying gRPC server.
+/// service implementations on the underlying gRPC server. Unary, server-streaming,
+/// and client-streaming methods live in separate registries so one path resolves
+/// to exactly one cardinality.
 pub struct RpcServer {
   conf : RpcServerConf
   handlers : Map[String, RpcHandler]
+  server_streaming : Map[String, ServerStreamHandler]
+  client_streaming : Map[String, ClientStreamHandler]
 }
 
 ///|
 /// Build an empty RPC server from its config.
 pub fn RpcServer::new(conf : RpcServerConf) -> RpcServer {
-  { conf, handlers: Map([]) }
+  {
+    conf,
+    handlers: Map([]),
+    server_streaming: Map([]),
+    client_streaming: Map([]),
+  }
 }
 
 ///|
@@ -105,6 +126,26 @@ pub fn RpcServer::register(
   handler : RpcHandler,
 ) -> Unit {
   self.handlers[desc.path()] = handler
+}
+
+///|
+/// Register a server-streaming `handler` for `method`, keyed by its gRPC path.
+pub fn RpcServer::register_server_streaming(
+  self : RpcServer,
+  desc : @moonrpc.Method,
+  handler : ServerStreamHandler,
+) -> Unit {
+  self.server_streaming[desc.path()] = handler
+}
+
+///|
+/// Register a client-streaming `handler` for `method`, keyed by its gRPC path.
+pub fn RpcServer::register_client_streaming(
+  self : RpcServer,
+  desc : @moonrpc.Method,
+  handler : ClientStreamHandler,
+) -> Unit {
+  self.client_streaming[desc.path()] = handler
 }
 
 ///|
@@ -173,4 +214,30 @@ pub fn RpcGroup::register(
   handler : RpcHandler,
 ) -> Unit {
   self.server.register({ service: self.service, name }, handler)
+}
+
+///|
+/// Register a server-streaming method `name` on this group's service.
+pub fn RpcGroup::register_server_streaming(
+  self : RpcGroup,
+  name : String,
+  handler : ServerStreamHandler,
+) -> Unit {
+  self.server.register_server_streaming(
+    { service: self.service, name },
+    handler,
+  )
+}
+
+///|
+/// Register a client-streaming method `name` on this group's service.
+pub fn RpcGroup::register_client_streaming(
+  self : RpcGroup,
+  name : String,
+  handler : ClientStreamHandler,
+) -> Unit {
+  self.server.register_client_streaming(
+    { service: self.service, name },
+    handler,
+  )
 }

@@ -79,28 +79,37 @@ let server = @moonzero.Server::new(conf, app)
 // YAML config — the etc/*.yaml format go-zero ships, same lenient defaults as JSON
 let conf = @moonzero.ServiceConf::from_yaml("name: greet\nport: 9000\nlog_level: error\n")
 
-// A real unary zRPC call over moonrpc's h2c transport
+// A real zRPC call over moonrpc's h2c transport — unary and streaming
 let rpc = @moonzero.RpcServer::new(@moonzero.RpcServerConf::new(name="greeter", port=9090))
-rpc.group("hello.Greeter").register("SayHello", req => handle(req))
+let g = rpc.group("hello.Greeter")
+g.register("SayHello", req => handle(req))                        // unary
+g.register_server_streaming("Tail", req => chunks(req))          // one in, many out
+g.register_client_streaming("Upload", msgs => summarize(msgs))   // many in, one out
 let ch = @moonzero.RpcChannel::connect(rpc)
-ch.call("/hello.Greeter/SayHello", request)    // Ok(reply) | Err(status)
+ch.call("/hello.Greeter/SayHello", request)              // Ok(reply) | Err(status)
+ch.call_server_streaming("/hello.Greeter/Tail", request) // Ok([msg, ...]) | Err(status)
+ch.call_client_streaming("/hello.Greeter/Upload", [a, b]) // Ok(reply) | Err(status)
 ```
 
 - **`jwt_sign` / `jwt_verify`** — compact HS256 tokens on a [self-built SHA-256 + HMAC-SHA256](./crypto.mbt), signatures compared in constant time, `exp`/`nbf` enforced, and the `alg:none` downgrade refused. Interop-verified against the canonical jwt.io token.
 - **`auth`** — the [middleware](./auth.mbt) that requires `Authorization: Bearer <jwt>` and answers `401` for an absent, malformed, tampered, or expired token.
 - **`ServiceConf::from_yaml`** — a [minimal-subset YAML parser](./yaml.mbt) (block maps, nesting, sequences, typed scalars, comments) feeding the same field reader as the JSON loader, so both formats agree field-for-field.
 - **`RpcServer` / `RpcGroup`** — [config-driven zRPC groups](./rpc.mbt) that register [`moonrpc`](https://github.com/Lfan-ke/moonrpc) `Method` handlers by gRPC path.
-- **`RpcChannel`** — a [client over the h2c transport](./zrpc.mbt): `to_h2` turns the registered handlers into a `moonrpc` `H2Server`, and a `call` runs a real unary exchange through it — HPACK-coded HEADERS, a length-prefixed DATA frame, and the `grpc-status` trailer read back off the reply. A call to an unregistered path comes back `UNIMPLEMENTED`, the trailers-only response a gRPC server sends for an unknown method.
+- **`RpcChannel`** — a [client over the h2c transport](./zrpc.mbt): `to_h2` turns the registered handlers into a `moonrpc` `H2Server`, and the `call` family runs real exchanges through it — HPACK-coded HEADERS, length-prefixed DATA frames, and the `grpc-status` trailer read back off the reply. Unary (`call`), server-streaming (`call_server_streaming`, one request then every framed reply in order), and client-streaming (`call_client_streaming`, each request as its own DATA frame then one reply after half-close) all round-trip through the same engine. A call to an unregistered path comes back `UNIMPLEMENTED`, the trailers-only response a gRPC server sends for an unknown method.
 
 ## Discovery, metrics, tracing
 
 ```moonbit
-// Service registry (etcd-shaped): register instances, resolve, balance
-let reg = @moonzero.InMemoryRegistry::new()
+// Persisted, watchable registry (etcd v3-shaped): register, watch, snapshot
+let reg = @moonzero.PersistentRegistry::new()
+reg.watch(e => log(e))                         // Put/Delete events in revision order
 reg.register("greeter", @moonzero.Endpoint::new("10.0.0.1", 9090))
 reg.register("greeter", @moonzero.Endpoint::new("10.0.0.2", 9090))
-let lb = @moonzero.RoundRobin::new()
-@moonzero.resolve_one(reg, "greeter", lb)      // Some(10.0.0.1:9090), then .2, cycling
+let saved = reg.snapshot()                      // persist to a file/etcd; restore reloads it
+
+// Load-balanced client: resolve an instance, then call it over h2c
+let ch = @moonzero.LoadBalancedChannel::new(reg.resolver(), cluster, "greeter")
+ch.call("/hello.Greeter/SayHello", request)     // dials 10.0.0.1, then .2, cycling
 
 // Metrics read out for a /metrics scrape after serving
 let m = @moonzero.ServerMetrics::new()
@@ -108,13 +117,15 @@ m.requests().value("GET /ping 200")            // request count for that label
 m.latency().mean()                             // mean request latency, ms
 ```
 
-- **`InMemoryRegistry`** — a [service registry](./registry.mbt) shaped like go-zero's etcd `discov` store: a `service -> instance -> endpoint` map with a monotonic store revision a watcher can compare against. `RoundRobin` and `pick_first` balancers select an endpoint from a resolved set; an etcd- or consul-backed store with the same `resolve` shape drops in unchanged.
+- **`InMemoryRegistry`** — a [service registry](./registry.mbt) shaped like go-zero's etcd `discov` store: a `service -> instance -> endpoint` map with a monotonic store revision a watcher can compare against. `RoundRobin` and `pick_first` balancers select an endpoint from a resolved set.
+- **`PersistentRegistry`** — the [persisted, watchable registry](./discovery.mbt): adds a live `watch` (Put/Delete events in revision order), an `events_since` catch-up from any revision, and `snapshot`/`restore` that round-trip the whole keyspace through an etcd v3 `RangeResponse`-shaped JSON document without losing a revision — the bytes a file- or etcd-backed deployment persists and reloads.
+- **`LoadBalancedChannel`** — a [load-balanced zRPC client](./discovery.mbt) over a `Resolve` interface: it resolves a service, picks a live instance with the balancer, dials it through an `RpcCluster`, and makes the call, so instances registering or leaving between calls take effect on the next one. Any store exposing `resolver()` backs it; an etcd- or consul-backed store drops in unchanged.
 - **`ServerMetrics`** — a [`CounterVec`](./metrics.mbt) of per-method/route/status request tallies and a cumulative latency `Histogram` (Prometheus `le` buckets, sum, count), driven by the `metrics` middleware that times each request on the clock.
 - **`tracing`** — [trace-id propagation](./tracing.mbt): continue an inbound W3C `traceparent` or start a new trace, mint a child span, and stamp `traceparent` + `x-trace-id` onto the response.
 
 ## Roadmap (transliterating go-zero)
 
-Typed config (JSON + YAML with defaults, timeout + log level) + service assembly + the base middleware onion (logging, recovery, CORS, request-id) + the resilience set (timeout, rate-limit, breaker, maxbytes, structured logging) + route groups + JWT auth + zRPC groups with a real h2c round-trip + a service registry with balancers + request metrics + trace-id propagation are here. Next: server/client streaming once `moonrpc` lands it, an etcd/consul-backed registry, and `moonctl`-driven scaffolding of a full `moonzero` service from a spec.
+Typed config (JSON + YAML with defaults, timeout + log level) + service assembly + the base middleware onion (logging, recovery, CORS, request-id) + the resilience set (timeout, rate-limit, breaker, maxbytes, structured logging) + route groups + JWT auth + zRPC groups with real unary and server/client-streaming h2c round-trips + a persisted, watchable registry with round-robin/pick-first balancers and a load-balanced client + request metrics + trace-id propagation are here. Next: bidi-streaming zRPC, an etcd/consul network client behind the same `Resolve` interface, and `moonctl`-driven scaffolding of a full `moonzero` service from a spec.
 
 ## License
 

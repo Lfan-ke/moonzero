@@ -42,14 +42,19 @@ SECTIONS = [
      "path and dispatches unary calls, returning Unimplemented for unknown "
      "methods; RpcGroup registers a set of methods under one package.Service."),
     ("zrpc", "zrpc.mbt", "zRPC over the h2c transport",
-     "RpcServer::to_h2 exposes the registered handlers as a moonrpc H2Server, "
-     "and RpcChannel drives a real unary call over that transport: HPACK-coded "
-     "HEADERS, a length-prefixed DATA frame, and the grpc-status trailer read "
-     "back off the reply."),
+     "RpcServer::to_h2 exposes the registered handlers as a moonrpc H2Server, and "
+     "RpcChannel drives real unary and server/client-streaming calls over that "
+     "transport: HPACK-coded HEADERS, length-prefixed DATA frames, and the "
+     "grpc-status trailer read back off the reply."),
     ("registry", "registry.mbt", "Service registry & discovery",
      "An InMemoryRegistry (etcd-shaped: service -> instance -> endpoint with a "
      "store revision) plus RoundRobin/pick_first balancers and resolve_one, the "
      "resolve-then-balance step a client runs before a call."),
+    ("discovery", "discovery.mbt", "Persisted registry & load-balanced client",
+     "A PersistentRegistry that adds watch, events_since catch-up, and "
+     "snapshot/restore through an etcd v3 RangeResponse-shaped JSON document, and "
+     "a LoadBalancedChannel that resolves a service through the Resolve interface, "
+     "balances to a live instance, and dials it over the h2c transport."),
     ("metrics", "metrics.mbt", "Metrics",
      "A CounterVec of per-method/route/status request tallies and a cumulative "
      "latency Histogram (Prometheus le buckets), wired by the metrics middleware "

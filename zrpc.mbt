@@ -77,6 +77,12 @@ pub fn RpcServer::to_h2(self : RpcServer) -> @moonrpc.H2Server {
   for path, handler in self.handlers {
     engine.register(path, req => handler(req))
   }
+  for path, handler in self.server_streaming {
+    engine.register_server_streaming(path, (_ctx, req) => handler(req))
+  }
+  for path, handler in self.client_streaming {
+    engine.register_client_streaming(path, (_ctx, msgs) => handler(msgs))
+  }
   engine
 }
 
@@ -128,6 +134,85 @@ pub fn RpcChannel::call(
   path : String,
   request : Bytes,
 ) -> Result[Bytes, @moonrpc.Status] raise {
+  let (sid, frames) = self.open(path)
+  for f in self.feed_data(sid, @moonrpc.encode_message(request), true) {
+    frames.push(f)
+  }
+  match self.collect_reply(sid, frames) {
+    (code, msgs) =>
+      match status_of_code(code) {
+        Ok => Ok(if msgs.length() > 0 { msgs[0] } else { b"" })
+        other => Err(other)
+      }
+  }
+}
+
+///|
+/// Invoke a server-streaming method at `path`: send the single request message and
+/// read back the ordered sequence of reply messages the server produced, or the
+/// mapped error `@moonrpc.Status` if the stream closed with a non-zero
+/// `grpc-status`. On `Ok` the array holds every message in emission order (possibly
+/// empty).
+pub fn RpcChannel::call_server_streaming(
+  self : RpcChannel,
+  path : String,
+  request : Bytes,
+) -> Result[Array[Bytes], @moonrpc.Status] raise {
+  let (sid, frames) = self.open(path)
+  for f in self.feed_data(sid, @moonrpc.encode_message(request), true) {
+    frames.push(f)
+  }
+  match self.collect_reply(sid, frames) {
+    (code, msgs) =>
+      match status_of_code(code) {
+        Ok => Ok(msgs)
+        other => Err(other)
+      }
+  }
+}
+
+///|
+/// Invoke a client-streaming method at `path`: send every message in `requests`
+/// as its own DATA frame, half-close the stream, and read back the single reply.
+/// An empty `requests` still opens and half-closes the stream, so the handler runs
+/// with no messages.
+pub fn RpcChannel::call_client_streaming(
+  self : RpcChannel,
+  path : String,
+  requests : Array[Bytes],
+) -> Result[Bytes, @moonrpc.Status] raise {
+  let (sid, frames) = self.open(path)
+  if requests.length() == 0 {
+    for f in self.feed_data(sid, b"", true) {
+      frames.push(f)
+    }
+  } else {
+    for i = 0; i < requests.length(); i = i + 1 {
+      let last = i == requests.length() - 1
+      for f in self.feed_data(sid, @moonrpc.encode_message(requests[i]), last) {
+        frames.push(f)
+      }
+    }
+  }
+  match self.collect_reply(sid, frames) {
+    (code, msgs) =>
+      match status_of_code(code) {
+        Ok => Ok(if msgs.length() > 0 { msgs[0] } else { b"" })
+        other => Err(other)
+      }
+  }
+}
+
+///|
+/// Allocate the next client stream id and send the request HEADERS (the gRPC
+/// pseudo-headers + `content-type`/`te`), returning the id and any frames the engine
+/// emitted right away — an unregistered path answers with its trailers-only
+/// UNIMPLEMENTED during this HEADERS feed, before any DATA. Client-initiated streams
+/// use odd identifiers advancing by two (RFC 7540 §5.1.1).
+fn RpcChannel::open(
+  self : RpcChannel,
+  path : String,
+) -> (Int, Array[@moonrpc.Frame]) raise {
   let sid = self.next_stream_id
   self.next_stream_id = self.next_stream_id + 2
   let block = self.encoder.encode([
@@ -138,44 +223,42 @@ pub fn RpcChannel::call(
     { name: b"content-type", value: b"application/grpc" },
     { name: b"te", value: b"trailers" },
   ])
-  let frames : Array[@moonrpc.Frame] = []
-  for
-    f in self.engine.feed(
-      Headers(
-        stream_id=sid,
-        fragment=block,
-        end_stream=false,
-        end_headers=true,
-        priority=None,
-        padding=0,
-      ),
-    ) {
-    frames.push(f)
-  }
-  for
-    f in self.engine.feed(
-      Data(
-        stream_id=sid,
-        data=@moonrpc.encode_message(request),
-        end_stream=true,
-        padding=0,
-      ),
-    ) {
-    frames.push(f)
-  }
-  self.parse_reply(sid, frames)
+  let frames = self.engine.feed(
+    Headers(
+      stream_id=sid,
+      fragment=block,
+      end_stream=false,
+      end_headers=true,
+      priority=None,
+      padding=0,
+    ),
+  )
+  (sid, frames)
+}
+
+///|
+/// Feed one DATA frame carrying `payload` on stream `sid`, half-closing the stream
+/// when `end` is set, and return the reply frames the engine emitted.
+fn RpcChannel::feed_data(
+  self : RpcChannel,
+  sid : Int,
+  payload : Bytes,
+  end : Bool,
+) -> Array[@moonrpc.Frame] raise {
+  self.engine.feed(Data(stream_id=sid, data=payload, end_stream=end, padding=0))
 }
 
 ///|
 /// Decode the engine's reply frames for stream `sid`: concatenate DATA payloads,
 /// HPACK-decode every HEADERS block in arrival order (keeping the decoder's
-/// dynamic table in sync) to find `grpc-status`, then hand back the message or the
-/// error status. An absent `grpc-status` is treated as `Unknown`.
-fn RpcChannel::parse_reply(
+/// dynamic table in sync) to find `grpc-status`, then split the body into its
+/// length-prefixed messages. Returns the status code (`-1`, i.e. `Unknown`, when no
+/// `grpc-status` was seen) and the decoded messages in order.
+fn RpcChannel::collect_reply(
   self : RpcChannel,
   sid : Int,
   frames : Array[@moonrpc.Frame],
-) -> Result[Bytes, @moonrpc.Status] raise {
+) -> (Int, Array[Bytes]) raise {
   let body = Buffer()
   let mut status_code : Int = -1
   for f in frames {
@@ -195,12 +278,27 @@ fn RpcChannel::parse_reply(
       _ => ()
     }
   }
-  match status_of_code(status_code) {
-    Ok =>
-      match @moonrpc.decode_message(body.to_bytes()) {
-        Some((_, payload)) => Ok(payload)
-        None => Ok(b"")
-      }
-    other => Err(other)
+  (status_code, decode_all_messages(body.to_bytes()))
+}
+
+///|
+/// Split a run of concatenated gRPC length-prefixed messages into their payloads,
+/// stopping at the first truncated frame. Each message is a 1-byte compression flag
+/// plus a 4-byte big-endian length plus that many payload octets.
+fn decode_all_messages(body : Bytes) -> Array[Bytes] {
+  let out : Array[Bytes] = []
+  let n = body.length()
+  let mut off = 0
+  while n - off >= 5 {
+    let len = (body[off + 1].to_int() << 24) |
+      (body[off + 2].to_int() << 16) |
+      (body[off + 3].to_int() << 8) |
+      body[off + 4].to_int()
+    if n - off < 5 + len {
+      break
+    }
+    out.push(body[off + 5:off + 5 + len].to_owned())
+    off = off + 5 + len
   }
+  out
 }
