@@ -63,9 +63,34 @@ let server = @moonzero.Server::new(conf, app)
 - **`maxbytes`** — rejects a request whose declared `Content-Length` exceeds the limit with `413`.
 - **`structured_logging`** — a [`RequestLog`](./logging.mbt) rendered as one JSON line per request (method, path, status, duration, request-id, client-ip, user-agent).
 
+## Auth, YAML config, and zRPC groups
+
+```moonbit
+// JWT HS256 — self-built SHA-256/HMAC (verified against NIST/RFC vectors)
+let token = @moonzero.jwt_sign(
+  Map([("sub", Json::string("alice")), ("exp", Json::number(1893456000.0))]),
+  "topsecret",
+)
+let server = @moonzero.Server::new(conf, app)
+  .use_(@moonzero.auth("topsecret", clock))   // 401 unless a valid Bearer JWT
+
+// YAML config — the etc/*.yaml format go-zero ships, same lenient defaults as JSON
+let conf = @moonzero.ServiceConf::from_yaml("name: greet\nport: 9000\nlog_level: error\n")
+
+// zRPC service groups over moonrpc — register Method handlers, dispatch by gRPC path
+let rpc = @moonzero.RpcServer::new(@moonzero.RpcServerConf::new(name="greeter", port=9090))
+rpc.group("hello.Greeter").register("SayHello", req => handle(req))
+rpc.dispatch("/hello.Greeter/SayHello", request)   // Ok(bytes) | Err(Unimplemented)
+```
+
+- **`jwt_sign` / `jwt_verify`** — compact HS256 tokens on a [self-built SHA-256 + HMAC-SHA256](./crypto.mbt), signatures compared in constant time, `exp`/`nbf` enforced, and the `alg:none` downgrade refused. Interop-verified against the canonical jwt.io token.
+- **`auth`** — the [middleware](./auth.mbt) that requires `Authorization: Bearer <jwt>` and answers `401` for an absent, malformed, tampered, or expired token.
+- **`ServiceConf::from_yaml`** — a [minimal-subset YAML parser](./yaml.mbt) (block maps, nesting, sequences, typed scalars, comments) feeding the same field reader as the JSON loader, so both formats agree field-for-field.
+- **`RpcServer` / `RpcGroup`** — [config-driven zRPC groups](./rpc.mbt) that register [`moonrpc`](https://github.com/Lfan-ke/moonrpc) `Method` handlers by gRPC path and dispatch unary calls, returning `Unimplemented` for an unknown method.
+
 ## Roadmap (transliterating go-zero)
 
-Typed config (JSON loading with defaults, timeout + log level) + service assembly + the base middleware onion (logging, recovery, CORS, request-id) + the resilience set (timeout, rate-limit, breaker, maxbytes, structured logging) + route groups are here. Next, feature-by-feature: YAML config loading, auth (JWT) + metrics/tracing/prometheus middleware, RPC service groups over `moonrpc`, and service discovery / registry — plus `moonctl`-driven scaffolding of a full `moonzero` service from a spec.
+Typed config (JSON + YAML loading with defaults, timeout + log level) + service assembly + the base middleware onion (logging, recovery, CORS, request-id) + the resilience set (timeout, rate-limit, breaker, maxbytes, structured logging) + route groups + JWT auth + zRPC service groups are here. Next, feature-by-feature: metrics/tracing/prometheus middleware, the real h2 transport under `moonrpc` for live RPC, and service discovery / registry (etcd/consul) — plus `moonctl`-driven scaffolding of a full `moonzero` service from a spec.
 
 ## License
 

@@ -36,6 +36,35 @@ pub fn ServiceConf::from_json(src : String) -> ServiceConf raise ConfigError {
     Object(m) => m
     _ => raise ConfigError("config root must be a JSON object")
   }
+  service_conf_of_object(obj)
+}
+
+///|
+/// Load a `ServiceConf` from a **YAML** config string — the format go-zero
+/// actually ships (`etc/*.yaml`) — with the same lenient, default-filling
+/// semantics as `from_json`: an empty document yields exactly
+/// `ServiceConf::new()`, and each omitted field falls back to its `new()`
+/// default. The YAML is parsed by the self-built `yaml_parse` (block mappings,
+/// nesting, sequences, scalars, comments) into a `Json` object, then decoded by
+/// the shared field reader — so JSON and YAML configs agree field-for-field.
+///
+/// Raises `ConfigError` on malformed YAML, a non-mapping root, or a field of the
+/// wrong type.
+pub fn ServiceConf::from_yaml(src : String) -> ServiceConf raise ConfigError {
+  let obj = match yaml_parse(src) {
+    Object(m) => m
+    _ => raise ConfigError("config root must be a YAML mapping")
+  }
+  service_conf_of_object(obj)
+}
+
+///|
+/// Decode a `ServiceConf` from an already-parsed config object, filling every
+/// omitted field from `ServiceConf::new()`'s defaults. Shared by the JSON and
+/// YAML loaders so both formats apply identical lenient semantics.
+fn service_conf_of_object(
+  obj : Map[String, Json],
+) -> ServiceConf raise ConfigError {
   let def = ServiceConf::new()
   let name = string_field(obj, "name", def.name)
   let host = string_field(obj, "host", def.host)

@@ -17,10 +17,30 @@ SECTIONS = [
      "Group registers a set of moonapi routes under a shared path prefix, so "
      "related endpoints are declared without repeating the prefix."),
     ("config", "config.mbt", "Typed config loading",
-     "Parse a JSON config string into a ServiceConf: a strict derived FromJson "
-     "path plus a lenient ServiceConf::from_json loader that fills omitted "
-     "fields from the new() defaults, the way go-zero's conf.Load applies "
-     ",optional/,default= tags."),
+     "Parse a JSON or YAML config string into a ServiceConf: a strict derived "
+     "FromJson path plus lenient ServiceConf::from_json / from_yaml loaders that "
+     "fill omitted fields from the new() defaults, the way go-zero's conf.Load "
+     "applies ,optional/,default= tags."),
+    ("yaml", "yaml.mbt", "YAML config parser",
+     "A self-built minimal-subset YAML parser (block mappings, indentation "
+     "nesting, sequences, quoted/typed scalars, comments) into a Json value — "
+     "the etc/*.yaml format go-zero actually ships, complementing the JSON loader."),
+    ("crypto", "crypto.mbt", "Crypto primitives",
+     "Self-built SHA-256 (FIPS 180-4) and HMAC-SHA256 (RFC 2104), verified "
+     "against NIST/RFC vectors, plus a constant-time byte comparison — the "
+     "primitives behind JWT HS256, since MoonBit's core ships no crypto."),
+    ("jwt", "jwt.mbt", "JWT (HS256)",
+     "base64url plus compact-JWT signing and verification under HS256: "
+     "jwt_sign / jwt_verify check the signature in constant time and enforce "
+     "exp/nbf, rejecting the alg:none downgrade — go-zero's token auth core."),
+    ("auth", "auth.mbt", "JWT auth middleware",
+     "The auth middleware requires every HTTP request to carry a valid "
+     "Authorization: Bearer <jwt>, rejecting absent/malformed/tampered/expired "
+     "tokens with 401 before the app runs."),
+    ("rpc", "rpc.mbt", "zRPC service groups",
+     "An RpcServer (config-driven) registers moonrpc Method handlers by gRPC "
+     "path and dispatches unary calls, returning Unimplemented for unknown "
+     "methods; RpcGroup registers a set of methods under one package.Service."),
     ("clock", "clock.mbt", "Clock abstraction",
      "A millisecond time source injected into the resilience middlewares so "
      "their timing is a pure function of an explicit clock; ManualClock drives "
@@ -234,7 +254,7 @@ def main():
             'Backend-agnostic; served by mooncat.</p>'
             '<div class="badges">'
             '<a href="https://github.com/Lfan-ke/moonzero/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Lfan-ke/moonzero/ci.yml?branch=master&label=CI&logo=github"></a>'
-            '<img alt="tests" src="https://img.shields.io/badge/tests-12%20passing%20%C3%974%20backends-0ca678">'
+            '<img alt="tests" src="https://img.shields.io/badge/tests-57%20passing%20%C3%974%20backends-0ca678">'
             '<a href="https://github.com/Lfan-ke/moonzero"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-source-24292f?logo=github"></a>'
             '<img alt="license" src="https://img.shields.io/badge/license-Apache--2.0-6d5efc"></div>'
             '<div class="install"><span class="prompt">$</span><code>moon add Lfan-ke/moonzero</code>'
