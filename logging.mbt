@@ -104,7 +104,7 @@ pub fn structured_logging(clock : Clock) -> Middleware {
           let logged : Ref[Bool] = { val: false }
           let observed : @moonasgi.Send = event => {
             match event {
-              HttpResponseStart(status~, headers~) => {
+              HttpResponseStart(status~, headers~, trailers~) => {
                 if !logged.val {
                   logged.val = true
                   let entry = RequestLog::{
@@ -118,7 +118,13 @@ pub fn structured_logging(clock : Clock) -> Middleware {
                   }
                   println(entry.render())
                 }
-                send(@moonasgi.Event::HttpResponseStart(status~, headers~))
+                send(
+                  @moonasgi.Event::HttpResponseStart(
+                    status~,
+                    headers~,
+                    trailers~,
+                  ),
+                )
               }
               other => send(other)
             }

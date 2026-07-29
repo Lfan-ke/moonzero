@@ -43,9 +43,11 @@ pub fn Deadline::remaining(self : Deadline, now : Int64) -> Int64 {
 /// `503`.) A pure value so the response is testable without the async transport.
 fn timeout_events() -> Array[@moonasgi.Event] {
   [
-    @moonasgi.Event::HttpResponseStart(status=503, headers=[
-      ("content-type", "text/plain; charset=utf-8"),
-    ]),
+    @moonasgi.Event::HttpResponseStart(
+      status=503,
+      headers=[("content-type", "text/plain; charset=utf-8")],
+      trailers=false,
+    ),
     @moonasgi.Event::HttpResponseBody(body=b"service timeout", more_body=false),
   ]
 }
@@ -139,9 +141,11 @@ fn content_length_exceeds(scope : @moonasgi.Scope, limit : Int) -> Bool {
 /// with a short plain-text body. A pure value, testable without the transport.
 fn payload_too_large_events() -> Array[@moonasgi.Event] {
   [
-    @moonasgi.Event::HttpResponseStart(status=413, headers=[
-      ("content-type", "text/plain; charset=utf-8"),
-    ]),
+    @moonasgi.Event::HttpResponseStart(
+      status=413,
+      headers=[("content-type", "text/plain; charset=utf-8")],
+      trailers=false,
+    ),
     @moonasgi.Event::HttpResponseBody(
       body=b"413 Payload Too Large",
       more_body=false,

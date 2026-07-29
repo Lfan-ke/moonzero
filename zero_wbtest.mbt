@@ -18,6 +18,8 @@ fn scope_with(headers : Array[(String, String)]) -> @moonasgi.Scope {
     headers,
     client: None,
     server: None,
+    asgi: @moonasgi.AsgiVersion::http(),
+    extensions: @moonasgi.Extensions::none(),
     state: Map([]),
   })
 }
@@ -156,7 +158,7 @@ test "recovery emits a 500 with a body" {
   let mut body_len = 0
   for e in events {
     match e {
-      HttpResponseStart(status=s, headers=_) => status = s
+      HttpResponseStart(status=s, ..) => status = s
       HttpResponseBody(body~, more_body=_) => body_len = body.length()
       _ => ()
     }

@@ -137,9 +137,11 @@ pub fn Breaker::record_failure(self : Breaker, now : Int64) -> Unit {
 /// breaker's response is testable without driving the async transport.
 fn service_unavailable_events() -> Array[@moonasgi.Event] {
   [
-    @moonasgi.Event::HttpResponseStart(status=503, headers=[
-      ("content-type", "text/plain; charset=utf-8"),
-    ]),
+    @moonasgi.Event::HttpResponseStart(
+      status=503,
+      headers=[("content-type", "text/plain; charset=utf-8")],
+      trailers=false,
+    ),
     @moonasgi.Event::HttpResponseBody(
       body=b"503 Service Unavailable",
       more_body=false,
@@ -164,9 +166,15 @@ pub fn breaker(b : Breaker, clock : Clock) -> Middleware {
             let status : Ref[Int] = { val: 200 }
             let observed : @moonasgi.Send = event => {
               match event {
-                HttpResponseStart(status=s, headers~) => {
+                HttpResponseStart(status=s, headers~, trailers~) => {
                   status.val = s
-                  send(@moonasgi.Event::HttpResponseStart(status=s, headers~))
+                  send(
+                    @moonasgi.Event::HttpResponseStart(
+                      status=s,
+                      headers~,
+                      trailers~,
+                    ),
+                  )
                 }
                 other => send(other)
               }

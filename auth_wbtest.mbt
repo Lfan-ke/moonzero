@@ -40,7 +40,7 @@ test "unauthorized_events carry a 401 and a bearer challenge" {
   let mut challenge : String? = None
   for e in events {
     match e {
-      HttpResponseStart(status=s, headers~) => {
+      HttpResponseStart(status=s, headers~, ..) => {
         status = s
         for h in headers {
           if h.0 == "www-authenticate" {

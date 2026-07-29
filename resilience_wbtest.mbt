@@ -29,7 +29,7 @@ fn json_num(j : Json, key : String) -> Double {
 fn start_status(events : Array[@moonasgi.Event]) -> Int {
   for e in events {
     match e {
-      HttpResponseStart(status~, headers=_) => return status
+      HttpResponseStart(status~, ..) => return status
       _ => ()
     }
   }

@@ -27,10 +27,14 @@ fn strip_bearer(value : String?) -> String? {
 /// pure value so the guard's rejection is testable without the async transport.
 fn unauthorized_events() -> Array[@moonasgi.Event] {
   [
-    @moonasgi.Event::HttpResponseStart(status=401, headers=[
-      ("content-type", "text/plain; charset=utf-8"),
-      ("www-authenticate", "Bearer"),
-    ]),
+    @moonasgi.Event::HttpResponseStart(
+      status=401,
+      headers=[
+        ("content-type", "text/plain; charset=utf-8"),
+        ("www-authenticate", "Bearer"),
+      ],
+      trailers=false,
+    ),
     @moonasgi.Event::HttpResponseBody(body=b"401 Unauthorized", more_body=false),
   ]
 }

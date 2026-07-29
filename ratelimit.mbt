@@ -78,9 +78,11 @@ pub fn TokenBucket::available(self : TokenBucket, now : Int64) -> Double {
 /// without driving the async transport.
 fn too_many_requests_events() -> Array[@moonasgi.Event] {
   [
-    @moonasgi.Event::HttpResponseStart(status=429, headers=[
-      ("content-type", "text/plain; charset=utf-8"),
-    ]),
+    @moonasgi.Event::HttpResponseStart(
+      status=429,
+      headers=[("content-type", "text/plain; charset=utf-8")],
+      trailers=false,
+    ),
     @moonasgi.Event::HttpResponseBody(
       body=b"429 Too Many Requests",
       more_body=false,

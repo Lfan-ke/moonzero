@@ -4,9 +4,11 @@
 /// behaviour is testable without driving the async transport.
 fn internal_error_events() -> Array[@moonasgi.Event] {
   [
-    @moonasgi.Event::HttpResponseStart(status=500, headers=[
-      ("content-type", "text/plain; charset=utf-8"),
-    ]),
+    @moonasgi.Event::HttpResponseStart(
+      status=500,
+      headers=[("content-type", "text/plain; charset=utf-8")],
+      trailers=false,
+    ),
     @moonasgi.Event::HttpResponseBody(
       body=b"Internal Server Error",
       more_body=false,
@@ -81,11 +83,12 @@ pub fn cors(conf : CorsConf) -> Middleware {
     (scope, receive, send) => {
       let wrapped : @moonasgi.Send = event => {
         match event {
-          HttpResponseStart(status~, headers~) =>
+          HttpResponseStart(status~, headers~, trailers~) =>
             send(
               @moonasgi.Event::HttpResponseStart(
                 status~,
                 headers=[..cors_headers(conf), ..headers],
+                trailers~,
               ),
             )
           other => send(other)
@@ -139,11 +142,12 @@ pub fn request_id(header? : String = "x-request-id") -> Middleware {
       let id = resolve_request_id(scope_header(scope, header), counter)
       let wrapped : @moonasgi.Send = event => {
         match event {
-          HttpResponseStart(status~, headers~) =>
+          HttpResponseStart(status~, headers~, trailers~) =>
             send(
               @moonasgi.Event::HttpResponseStart(
                 status~,
                 headers=[(header, id), ..headers],
+                trailers~,
               ),
             )
           other => send(other)

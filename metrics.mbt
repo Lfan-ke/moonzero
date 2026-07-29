@@ -173,13 +173,19 @@ pub fn metrics(m : ServerMetrics, clock : Clock) -> Middleware {
           let recorded : Ref[Bool] = { val: false }
           let observed : @moonasgi.Send = event => {
             match event {
-              HttpResponseStart(status~, headers~) => {
+              HttpResponseStart(status~, headers~, trailers~) => {
                 if !recorded.val {
                   recorded.val = true
                   m.requests.inc(verb + " " + path + " " + status.to_string())
                   m.latency.observe((clock.now() - start).to_double())
                 }
-                send(@moonasgi.Event::HttpResponseStart(status~, headers~))
+                send(
+                  @moonasgi.Event::HttpResponseStart(
+                    status~,
+                    headers~,
+                    trailers~,
+                  ),
+                )
               }
               other => send(other)
             }

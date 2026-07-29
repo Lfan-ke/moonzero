@@ -172,7 +172,7 @@ pub fn tracing(header? : String = "x-trace-id") -> Middleware {
           let ctx = next_trace_context(inbound, counter.val)
           let wrapped : @moonasgi.Send = event => {
             match event {
-              HttpResponseStart(status~, headers~) =>
+              HttpResponseStart(status~, headers~, trailers~) =>
                 send(
                   @moonasgi.Event::HttpResponseStart(
                     status~,
@@ -181,6 +181,7 @@ pub fn tracing(header? : String = "x-trace-id") -> Middleware {
                       ("traceparent", ctx.to_traceparent()),
                       ..headers,
                     ],
+                    trailers~,
                   ),
                 )
               other => send(other)
