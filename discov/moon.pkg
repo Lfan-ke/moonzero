@@ -1,0 +1,15 @@
+// The native discovery driver: it gives moonzero's persisted registry real I/O by
+// reading and writing a real file through `moonbitlang/async`'s fs, and a live
+// watcher that reloads on file change. Native-only, because `moonbitlang/async`
+// (real files, the OS watch backend) has no JS/Wasm backend.
+supported_targets = "native"
+
+import {
+  "Lfan-ke/moonzero",
+  "moonbitlang/async/fs",
+  "moonbitlang/async/io",
+}
+
+import {
+  "moonbitlang/async",
+} for "test"

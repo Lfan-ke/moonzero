@@ -43,9 +43,16 @@ SECTIONS = [
      "methods; RpcGroup registers a set of methods under one package.Service."),
     ("zrpc", "zrpc.mbt", "zRPC over the h2c transport",
      "RpcServer::to_h2 exposes the registered handlers as a moonrpc H2Server, and "
-     "RpcChannel drives real unary and server/client-streaming calls over that "
-     "transport: HPACK-coded HEADERS, length-prefixed DATA frames, and the "
-     "grpc-status trailer read back off the reply."),
+     "RpcChannel drives real unary, server/client-streaming, and bidirectional "
+     "calls over that transport: HPACK-coded HEADERS, length-prefixed DATA frames, "
+     "and the grpc-status trailer read back off the reply. A BidiCall keeps the "
+     "stream open both ways — send returns the replies produced right then, "
+     "close_send runs the server's on_end and reports the final grpc-status."),
+    ("shutdown", "shutdown.mbt", "Graceful shutdown",
+     "A ShutdownCoordinator that drains in-flight zRPC calls: dispatch_graceful "
+     "counts each call for its duration, initiate_shutdown makes new calls come "
+     "back Unavailable while in-flight ones finish, and is_drained reports when "
+     "the last one has completed."),
     ("registry", "registry.mbt", "Service registry & discovery",
      "An InMemoryRegistry (etcd-shaped: service -> instance -> endpoint with a "
      "store revision) plus RoundRobin/pick_first balancers and resolve_one, the "
@@ -55,6 +62,12 @@ SECTIONS = [
      "snapshot/restore through an etcd v3 RangeResponse-shaped JSON document, and "
      "a LoadBalancedChannel that resolves a service through the Resolve interface, "
      "balances to a live instance, and dials it over the h2c transport."),
+    ("discov", "discov/discov.mbt", "Real file-backed registry I/O",
+     "The native discov driver (go-zero's discov publisher/subscriber over the "
+     "filesystem instead of etcd's network): persist_registry writes the snapshot "
+     "to a real file through moonbitlang/async's fs, FileRegistry loads it back and "
+     "exposes a resolver(), reload returns the Put/Delete diff since the last load, "
+     "and watch/watch_once reload on every real filesystem change."),
     ("metrics", "metrics.mbt", "Metrics",
      "A CounterVec of per-method/route/status request tallies and a cumulative "
      "latency Histogram (Prometheus le buckets), wired by the metrics middleware "
@@ -276,7 +289,7 @@ def main():
             'Backend-agnostic; served by mooncat.</p>'
             '<div class="badges">'
             '<a href="https://github.com/Lfan-ke/moonzero/actions"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Lfan-ke/moonzero/ci.yml?branch=master&label=CI&logo=github"></a>'
-            '<img alt="tests" src="https://img.shields.io/badge/tests-57%20passing%20%C3%974%20backends-0ca678">'
+            '<img alt="tests" src="https://img.shields.io/badge/tests-110%20passing-0ca678">'
             '<a href="https://github.com/Lfan-ke/moonzero"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-source-24292f?logo=github"></a>'
             '<img alt="license" src="https://img.shields.io/badge/license-Apache--2.0-6d5efc"></div>'
             '<div class="install"><span class="prompt">$</span><code>moon add Lfan-ke/moonzero</code>'

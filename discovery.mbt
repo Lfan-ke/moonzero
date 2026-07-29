@@ -153,6 +153,26 @@ pub fn PersistentRegistry::services(self : PersistentRegistry) -> Array[String] 
 }
 
 ///|
+/// Every registered instance as `(instance-key, endpoint, mod-revision)`, across
+/// all services — the flat keyspace a file- or etcd-backed reader diffs one load
+/// against the next to compute the `Put`/`Delete` events a change produced.
+pub fn PersistentRegistry::keyed_entries(
+  self : PersistentRegistry,
+) -> Array[(String, Endpoint, Int64)] {
+  let out : Array[(String, Endpoint, Int64)] = []
+  for _service, bucket in self.instances {
+    for key, ep in bucket {
+      let rev = match self.key_rev.get(key) {
+        Some(r) => r
+        None => 0L
+      }
+      out.push((key, ep, rev))
+    }
+  }
+  out
+}
+
+///|
 /// Register a live watcher fired on every subsequent mutation, in revision order
 /// (← etcd's `Watch` with no start revision). To also see changes already applied,
 /// replay `events_since` first.
@@ -450,6 +470,20 @@ pub fn LoadBalancedChannel::call_server_streaming(
 ) -> Result[Array[Bytes], @moonrpc.Status] raise {
   match self.pick_channel() {
     Ok(channel) => channel.call_server_streaming(path, request)
+    Err(status) => Err(status)
+  }
+}
+
+///|
+/// Make a bidirectional-streaming call to `path`, resolving and balancing to a
+/// live instance first, then driving the whole `requests` exchange to completion.
+pub fn LoadBalancedChannel::call_bidi_streaming(
+  self : LoadBalancedChannel,
+  path : String,
+  requests : Array[Bytes],
+) -> Result[Array[Bytes], @moonrpc.Status] raise {
+  match self.pick_channel() {
+    Ok(channel) => channel.call_bidi_streaming(path, requests)
     Err(status) => Err(status)
   }
 }

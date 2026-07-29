@@ -86,6 +86,24 @@ pub type ServerStreamHandler = (Bytes) -> Array[Bytes]
 pub type ClientStreamHandler = (Array[Bytes]) -> Bytes
 
 ///|
+/// A live bidirectional call (← go-zero's `pb.XxxServer` bidi method, which reads
+/// from and writes to the same `grpc.ServerStream`): `on_message` fires once per
+/// request message and returns the replies to send right then, so responses
+/// interleave with requests; `on_end` runs after the client half-closes and
+/// returns the final replies before the `grpc-status` trailer. The moonzero-local
+/// mirror of `@moonrpc.BidiHandler`, so callers register bidi methods without
+/// naming the transport package.
+pub(all) struct BidiStreamHandler {
+  on_message : (Bytes) -> Array[Bytes]
+  on_end : () -> Array[Bytes]
+}
+
+///|
+/// A factory that mints one `BidiStreamHandler` per call, so each stream gets its
+/// own handler state (← the fresh `ServerStream` gRPC hands every bidi invocation).
+pub type BidiStreamFactory = () -> BidiStreamHandler
+
+///|
 /// A zRPC server (← go-zero's `zrpc.Server`): config plus a registry mapping
 /// each method's gRPC `:path` (`/package.Service/Method`) to its handler.
 /// Handlers are registered via `@moonrpc.Method` descriptors — directly or
@@ -98,6 +116,7 @@ pub struct RpcServer {
   handlers : Map[String, RpcHandler]
   server_streaming : Map[String, ServerStreamHandler]
   client_streaming : Map[String, ClientStreamHandler]
+  bidi_streaming : Map[String, BidiStreamFactory]
 }
 
 ///|
@@ -108,6 +127,7 @@ pub fn RpcServer::new(conf : RpcServerConf) -> RpcServer {
     handlers: Map([]),
     server_streaming: Map([]),
     client_streaming: Map([]),
+    bidi_streaming: Map([]),
   }
 }
 
@@ -146,6 +166,17 @@ pub fn RpcServer::register_client_streaming(
   handler : ClientStreamHandler,
 ) -> Unit {
   self.client_streaming[desc.path()] = handler
+}
+
+///|
+/// Register a bidirectional-streaming `handler` for `method`, keyed by its gRPC
+/// path. `factory` runs once per call so each stream gets fresh handler state.
+pub fn RpcServer::register_bidi_streaming(
+  self : RpcServer,
+  desc : @moonrpc.Method,
+  factory : BidiStreamFactory,
+) -> Unit {
+  self.bidi_streaming[desc.path()] = factory
 }
 
 ///|
@@ -240,4 +271,14 @@ pub fn RpcGroup::register_client_streaming(
     { service: self.service, name },
     handler,
   )
+}
+
+///|
+/// Register a bidirectional-streaming method `name` on this group's service.
+pub fn RpcGroup::register_bidi_streaming(
+  self : RpcGroup,
+  name : String,
+  factory : BidiStreamFactory,
+) -> Unit {
+  self.server.register_bidi_streaming({ service: self.service, name }, factory)
 }
