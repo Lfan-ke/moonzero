@@ -22,6 +22,6 @@ description = "moonzero — a service framework for MoonBit (← go-zero): confi
 import {
   "Lfan-ke/moonapi@0.6.2",
   "Lfan-ke/moonasgi@0.6.1",
-  "Lfan-ke/moonrpc@0.5.0",
+  "Lfan-ke/moonrpc@0.7.0",
   "moonbitlang/async@0.20.3",
 }
