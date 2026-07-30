@@ -49,7 +49,7 @@ async test "integration: consul discovery register/resolve/deregister over a rea
   let resp = sock.request("GET", "/v1/health/service/greeter?passing=true", b"")
   assert_eq(resp.status(), 200)
   let eps = @moonzero.consul_parse_health(resp.body())
-  assert_eq(eps.length(), 2)
+  assert_eq(eps.length(), 3)
   let addrs = eps.map(e => e.address())
   assert_eq(addrs.contains("10.0.0.1:9090"), true)
   assert_eq(addrs.contains("10.0.0.2:9090"), true)
