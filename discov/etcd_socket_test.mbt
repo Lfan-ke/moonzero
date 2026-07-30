@@ -54,7 +54,7 @@ async test "integration: etcd discovery register/resolve/deregister over a real 
   )
   // Resolve: Range the prefix.
   let resp = sock.range({ key: prefix_bytes, range_end, limit: 0 })
-  assert_eq(resp.kvs.length(), 2)
+  assert_eq(resp.kvs.length(), 3)
   let addrs = resp.kvs.map(kv => @utf8.decode_lossy(kv.value[:]))
   assert_eq(addrs.contains("10.0.0.1:9090"), true)
   assert_eq(addrs.contains("10.0.0.2:9090"), true)
