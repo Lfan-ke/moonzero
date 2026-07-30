@@ -87,7 +87,7 @@ async test "integration: RESP discovery register/resolve/deregister over a real 
   )
   // Resolve: SCAN the prefix, GET each value.
   let keys = scan_all(sock, pattern)
-  assert_eq(keys.length(), 2)
+  assert_eq(keys.length(), 3)
   let addrs : Array[String] = []
   for key in keys {
     match sock.command(["GET", key]) {
