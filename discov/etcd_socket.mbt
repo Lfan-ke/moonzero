@@ -84,6 +84,29 @@ pub async fn EtcdSocket::delete_range(
 }
 
 ///|
+/// `Watch.Watch`: subscribe to changes on the key or range in `req` and read the first
+/// `count` `WatchResponse`s off the stream — the `created` acknowledgement, then events as
+/// the watched keys change. The responses are read inline (no background reader), so the
+/// caller collects what it needs and closes the connection; a live subscriber loops calling
+/// this. Changes are driven elsewhere (a `Put` on another connection), the way go-zero's
+/// discov subscriber watches etcd while publishers register.
+pub async fn EtcdSocket::watch(
+  self : EtcdSocket,
+  req : @moonzero.EtcdWatchCreateRequest,
+  count : Int,
+) -> Array[@moonzero.EtcdWatchResponse] {
+  let request = @moonzero.EtcdWatchRequest::Create(req).encode()
+  let raw = self.channel.stream_take(
+    "/etcdserverpb.Watch/Watch", request, count,
+  )
+  let out : Array[@moonzero.EtcdWatchResponse] = []
+  for bytes in raw {
+    out.push(@moonzero.EtcdWatchResponse::decode(bytes))
+  }
+  out
+}
+
+///|
 /// `Lease.LeaseGrant`: obtain a lease with the requested TTL.
 pub async fn EtcdSocket::lease_grant(
   self : EtcdSocket,
