@@ -26,6 +26,18 @@ pub fn ConsulResponse::new(status : Int, body : Bytes) -> ConsulResponse {
 }
 
 ///|
+/// The HTTP status code.
+pub fn ConsulResponse::status(self : ConsulResponse) -> Int {
+  self.status
+}
+
+///|
+/// The raw response body bytes.
+pub fn ConsulResponse::body(self : ConsulResponse) -> Bytes {
+  self.body
+}
+
+///|
 /// A transport to a consul agent: it performs one HTTP request (`method` and `path`,
 /// with `body` for writes) and returns the response. Implementations own the medium —
 /// a real HTTP socket, or an in-memory fake.
@@ -90,6 +102,24 @@ pub fn ConsulClient::register_service(
   port : Int,
   ttl_secs : Int,
 ) -> Unit raise ConsulError {
+  let _ = self.call(
+    "PUT",
+    "/v1/agent/service/register",
+    consul_register_body(id, name, address, port, ttl_secs),
+  )
+}
+
+///|
+/// The JSON body of a `service/register` request: the instance's id, name, address, and
+/// port, plus a TTL check that consul deregisters `ttl*3` seconds after it stops
+/// passing. Exposed so the native HTTP-socket path builds the exact same body.
+pub fn consul_register_body(
+  id : String,
+  name : String,
+  address : String,
+  port : Int,
+  ttl_secs : Int,
+) -> Bytes {
   let check : Map[String, Json] = Map([
     ("TTL", (ttl_secs.to_string() + "s").to_json()),
     (
@@ -104,11 +134,7 @@ pub fn ConsulClient::register_service(
     ("Port", port.to_json()),
     ("Check", check.to_json()),
   ])
-  let _ = self.call(
-    "PUT",
-    "/v1/agent/service/register",
-    @utf8.encode(body.to_json().stringify()),
-  )
+  @utf8.encode(body.to_json().stringify())
 }
 
 ///|
@@ -175,6 +201,13 @@ pub fn ConsulClient::agent_services(
     }
   }
   out
+}
+
+///|
+/// Parse a consul `health/service` JSON body into endpoints — exposed so the native
+/// HTTP-socket path decodes a real agent's response exactly as the client does.
+pub fn consul_parse_health(body : Bytes) -> Array[Endpoint] raise ConsulError {
+  parse_health_response(body)
 }
 
 ///|

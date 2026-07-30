@@ -87,3 +87,47 @@ jobs:
           MOON_REDIS_TEST: "1"
           MOON_REDIS_HOST: "127.0.0.1"
         run: moon test --target native
+
+  # consul's agent needs `agent -dev` arguments, so it is started with docker run
+  # rather than a service container; the native discov tests register a service with a
+  # TTL check, pass it, resolve the healthy set, and deregister, gated on
+  # MOON_CONSUL_TEST.
+  discovery-consul:
+    name: discovery drivers (native, live consul)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: install
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - name: post install
+        run: |
+          moon version --all
+          moon update
+
+      - name: start consul (dev agent)
+        run: |
+          docker run -d --name consul -p 8500:8500 hashicorp/consul:1.19 agent -dev -client 0.0.0.0
+
+      - name: wait for consul
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8500/v1/status/leader | grep -qE '[0-9]'; then
+              echo "consul is up"; break
+            fi
+            echo "waiting for consul... ($i)"; sleep 2
+          done
+          curl -sf http://127.0.0.1:8500/v1/agent/self | head -c 200
+
+      - name: discovery round trip against live consul
+        env:
+          MOON_CONSUL_TEST: "1"
+          MOON_CONSUL_HOST: "127.0.0.1"
+        run: moon test --target native
