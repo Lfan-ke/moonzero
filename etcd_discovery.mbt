@@ -23,19 +23,26 @@ pub fn EtcdDiscovery::new(
 }
 
 ///|
+/// The key prefix a service's instances live under: `<prefix><service>/`. Exposed so
+/// the native gRPC-socket path builds the exact same keys as the in-process driver.
+pub fn etcd_service_prefix(prefix : String, service : String) -> String {
+  prefix + service + "/"
+}
+
+///|
 /// The key prefix a service's instances live under: `<prefix><service>/`.
 fn EtcdDiscovery::service_prefix(
   self : EtcdDiscovery,
   service : String,
 ) -> String {
-  self.prefix + service + "/"
+  etcd_service_prefix(self.prefix, service)
 }
 
 ///|
 /// The etcd range-end for a prefix scan: the prefix with its last byte incremented,
 /// which is the smallest key greater than every key sharing the prefix (etcd's
 /// `getPrefix`). An all-`0xff` tail scans to the end of the keyspace (`\x00`).
-fn etcd_prefix_end(prefix : Bytes) -> Bytes {
+pub fn etcd_prefix_end(prefix : Bytes) -> Bytes {
   let out = Buffer()
   out.write_bytes(prefix)
   let bytes = out.to_bytes()

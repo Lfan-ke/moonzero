@@ -131,3 +131,49 @@ jobs:
           MOON_CONSUL_TEST: "1"
           MOON_CONSUL_HOST: "127.0.0.1"
         run: moon test --target native
+
+  # etcd serves plaintext gRPC (h2c) on 2379; the native discov client drives real
+  # KV/Lease calls over moonrpc's socket channel to register, resolve, and deregister,
+  # gated on MOON_ETCD_TEST.
+  discovery-etcd:
+    name: discovery drivers (native, live etcd)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: install
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - name: post install
+        run: |
+          moon version --all
+          moon update
+
+      - name: start etcd
+        run: |
+          docker run -d --name etcd -p 2379:2379 quay.io/coreos/etcd:v3.5.16 \
+            /usr/local/bin/etcd --name node1 \
+            --advertise-client-urls http://0.0.0.0:2379 \
+            --listen-client-urls http://0.0.0.0:2379
+
+      - name: wait for etcd
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:2379/health | grep -q '"health":"true"'; then
+              echo "etcd is up"; break
+            fi
+            echo "waiting for etcd... ($i)"; sleep 2
+          done
+          curl -sf http://127.0.0.1:2379/health
+
+      - name: discovery round trip against live etcd
+        env:
+          MOON_ETCD_TEST: "1"
+          MOON_ETCD_HOST: "127.0.0.1"
+        run: moon test --target native
