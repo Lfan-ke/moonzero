@@ -619,3 +619,124 @@ pub fn EtcdWatchResponse::decode(
   }
   { watch_id, created, canceled, events }
 }
+
+///|
+/// A `DeleteRangeRequest`: delete the key at `key`, or the half-open range
+/// `[key, range_end)`; `prev_kv` asks the server to return the deleted key/values. A
+/// discovery client sends this to deregister an instance.
+pub(all) struct EtcdDeleteRangeRequest {
+  key : Bytes
+  range_end : Bytes
+  prev_kv : Bool
+} derive(Eq)
+
+///|
+/// Encode a `DeleteRangeRequest` (key=1, range_end=2, prev_kv=3).
+pub fn EtcdDeleteRangeRequest::encode(self : EtcdDeleteRangeRequest) -> Bytes {
+  let w = @moonrpc.PbWriter::new()
+  if self.key.length() > 0 {
+    w.bytes_(1, self.key)
+  }
+  if self.range_end.length() > 0 {
+    w.bytes_(2, self.range_end)
+  }
+  if self.prev_kv {
+    w.bool_(3, self.prev_kv)
+  }
+  w.to_bytes()
+}
+
+///|
+/// Decode a `DeleteRangeRequest`.
+pub fn EtcdDeleteRangeRequest::decode(
+  data : Bytes,
+) -> EtcdDeleteRangeRequest raise @moonrpc.PbError {
+  let r = @moonrpc.PbReader::new(data)
+  let mut key = b""
+  let mut range_end = b""
+  let mut prev_kv = false
+  while !r.eof() {
+    let (field, wire) = r.read_tag()
+    match field {
+      1 => key = r.read_bytes()
+      2 => range_end = r.read_bytes()
+      3 => prev_kv = r.read_bool()
+      _ => r.skip(wire)
+    }
+  }
+  { key, range_end, prev_kv }
+}
+
+///|
+/// A `DeleteRangeResponse`: the number of keys `deleted` and, when `prev_kv` was
+/// requested, the `prev_kvs` that were removed.
+pub(all) struct EtcdDeleteRangeResponse {
+  deleted : Int64
+  prev_kvs : Array[EtcdKeyValue]
+} derive(Eq)
+
+///|
+/// Encode a `DeleteRangeResponse` (deleted=2, prev_kvs=3 repeated).
+pub fn EtcdDeleteRangeResponse::encode(self : EtcdDeleteRangeResponse) -> Bytes {
+  let w = @moonrpc.PbWriter::new()
+  if self.deleted != 0 {
+    w.int64(2, self.deleted)
+  }
+  for kv in self.prev_kvs {
+    w.message_(3, kv.encode())
+  }
+  w.to_bytes()
+}
+
+///|
+/// Decode a `DeleteRangeResponse`.
+pub fn EtcdDeleteRangeResponse::decode(
+  data : Bytes,
+) -> EtcdDeleteRangeResponse raise @moonrpc.PbError {
+  let r = @moonrpc.PbReader::new(data)
+  let mut deleted = 0L
+  let prev_kvs : Array[EtcdKeyValue] = []
+  while !r.eof() {
+    let (field, wire) = r.read_tag()
+    match field {
+      2 => deleted = r.read_int64()
+      3 => prev_kvs.push(EtcdKeyValue::decode(r.read_bytes()))
+      _ => r.skip(wire)
+    }
+  }
+  { deleted, prev_kvs }
+}
+
+///|
+/// A `PutResponse`: when `prev_kv` was requested on the `PutRequest`, the key/value
+/// that the put replaced (its key is empty when there was none).
+pub(all) struct EtcdPutResponse {
+  prev_kv : EtcdKeyValue
+} derive(Eq)
+
+///|
+/// Encode a `PutResponse` (prev_kv=2); an absent previous value (empty key) is omitted.
+pub fn EtcdPutResponse::encode(self : EtcdPutResponse) -> Bytes {
+  let w = @moonrpc.PbWriter::new()
+  if self.prev_kv.key.length() > 0 {
+    w.message_(2, self.prev_kv.encode())
+  }
+  w.to_bytes()
+}
+
+///|
+/// Decode a `PutResponse`.
+pub fn EtcdPutResponse::decode(
+  data : Bytes,
+) -> EtcdPutResponse raise @moonrpc.PbError {
+  let r = @moonrpc.PbReader::new(data)
+  let mut prev_kv = EtcdKeyValue::empty()
+  while !r.eof() {
+    let (field, wire) = r.read_tag()
+    match field {
+      2 => prev_kv = EtcdKeyValue::decode(r.read_bytes())
+      _ => r.skip(wire)
+    }
+  }
+  { prev_kv, }
+}

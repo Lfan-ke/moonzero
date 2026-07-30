@@ -175,3 +175,31 @@ test "etcd WatchResponse carries lifecycle flags and events through a round-trip
   assert_eq(decoded.events[0].kv.key == b"svc/a", true)
   assert_eq(decoded == resp, true)
 }
+
+///|
+test "etcd DeleteRange and PutResponse encode to the exact protobuf bytes" {
+  let del : EtcdDeleteRangeRequest = {
+    key: b"svc/a",
+    range_end: b"",
+    prev_kv: true,
+  }
+  assert_eq(del.encode() == etcd_unhex("0a057376632f611801"), true)
+  assert_eq(EtcdDeleteRangeRequest::decode(del.encode()) == del, true)
+  let del_range : EtcdDeleteRangeRequest = {
+    key: b"svc/",
+    range_end: b"svc0",
+    prev_kv: false,
+  }
+  assert_eq(del_range.encode() == etcd_unhex("0a047376632f120473766330"), true)
+  let deleted : EtcdDeleteRangeResponse = { deleted: 1, prev_kvs: [] }
+  assert_eq(deleted.encode() == etcd_unhex("1001"), true)
+  assert_eq(EtcdDeleteRangeResponse::decode(deleted.encode()) == deleted, true)
+  let put_resp : EtcdPutResponse = {
+    prev_kv: { ..EtcdKeyValue::empty(), key: b"svc/a", value: b"old" },
+  }
+  assert_eq(
+    put_resp.encode() == etcd_unhex("120c0a057376632f612a036f6c64"),
+    true,
+  )
+  assert_eq(EtcdPutResponse::decode(put_resp.encode()) == put_resp, true)
+}
