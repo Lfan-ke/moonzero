@@ -127,3 +127,51 @@ test "etcd watch Event encodes to the exact protobuf bytes, PUT vs DELETE" {
   assert_eq(decoded.event_type == Delete, true)
   assert_eq(decoded.kv.key == b"svc/a", true)
 }
+
+///|
+test "etcd Watch create/cancel requests encode to the exact protobuf bytes" {
+  let wc : EtcdWatchCreateRequest = {
+    key: b"svc/",
+    range_end: b"svc0",
+    start_revision: 5,
+  }
+  assert_eq(wc.encode() == etcd_unhex("0a047376632f1204737663301805"), true)
+  assert_eq(EtcdWatchCreateRequest::decode(wc.encode()) == wc, true)
+  // wrapped in the oneof WatchRequest as create_request (field 1)
+  let create_req : EtcdWatchRequest = Create(wc)
+  assert_eq(
+    create_req.encode() == etcd_unhex("0a0e0a047376632f1204737663301805"),
+    true,
+  )
+  assert_eq(EtcdWatchRequest::decode(create_req.encode()) == create_req, true)
+  // cancel_request (field 2)
+  let cancel_req : EtcdWatchRequest = Cancel({ watch_id: 42 })
+  assert_eq(cancel_req.encode() == etcd_unhex("1202082a"), true)
+  assert_eq(EtcdWatchRequest::decode(cancel_req.encode()) == cancel_req, true)
+}
+
+///|
+test "etcd WatchResponse carries lifecycle flags and events through a round-trip" {
+  let resp : EtcdWatchResponse = {
+    watch_id: 7,
+    created: true,
+    canceled: false,
+    events: [
+      {
+        event_type: Put,
+        kv: { ..EtcdKeyValue::empty(), key: b"svc/a", value: b"h1" },
+      },
+    ],
+  }
+  // protobuf: WatchResponse(watch_id=7, created=true, events=[PUT svc/a=h1])
+  assert_eq(
+    resp.encode() == etcd_unhex("100718015a0d120b0a057376632f612a026831"),
+    true,
+  )
+  let decoded = EtcdWatchResponse::decode(resp.encode())
+  assert_eq(decoded.watch_id, 7)
+  assert_eq(decoded.created, true)
+  assert_eq(decoded.events.length(), 1)
+  assert_eq(decoded.events[0].kv.key == b"svc/a", true)
+  assert_eq(decoded == resp, true)
+}

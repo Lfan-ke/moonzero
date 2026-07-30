@@ -444,3 +444,178 @@ pub fn EtcdEvent::decode(data : Bytes) -> EtcdEvent raise @moonrpc.PbError {
   }
   { event_type, kv }
 }
+
+///|
+/// A `WatchCreateRequest`: subscribe to changes on `key`, or on the half-open range
+/// `[key, range_end)`, from `start_revision` (0 = current). A discovery watcher opens
+/// one over the service's key prefix.
+pub(all) struct EtcdWatchCreateRequest {
+  key : Bytes
+  range_end : Bytes
+  start_revision : Int64
+} derive(Eq)
+
+///|
+/// Encode a `WatchCreateRequest` (key=1, range_end=2, start_revision=3).
+pub fn EtcdWatchCreateRequest::encode(self : EtcdWatchCreateRequest) -> Bytes {
+  let w = @moonrpc.PbWriter::new()
+  if self.key.length() > 0 {
+    w.bytes_(1, self.key)
+  }
+  if self.range_end.length() > 0 {
+    w.bytes_(2, self.range_end)
+  }
+  if self.start_revision != 0 {
+    w.int64(3, self.start_revision)
+  }
+  w.to_bytes()
+}
+
+///|
+/// Decode a `WatchCreateRequest`.
+pub fn EtcdWatchCreateRequest::decode(
+  data : Bytes,
+) -> EtcdWatchCreateRequest raise @moonrpc.PbError {
+  let r = @moonrpc.PbReader::new(data)
+  let mut key = b""
+  let mut range_end = b""
+  let mut start_revision = 0L
+  while !r.eof() {
+    let (field, wire) = r.read_tag()
+    match field {
+      1 => key = r.read_bytes()
+      2 => range_end = r.read_bytes()
+      3 => start_revision = r.read_int64()
+      _ => r.skip(wire)
+    }
+  }
+  { key, range_end, start_revision }
+}
+
+///|
+/// A `WatchCancelRequest`: stop the watch stream identified by `watch_id`.
+pub(all) struct EtcdWatchCancelRequest {
+  watch_id : Int64
+} derive(Eq)
+
+///|
+/// Encode a `WatchCancelRequest` (watch_id=1).
+pub fn EtcdWatchCancelRequest::encode(self : EtcdWatchCancelRequest) -> Bytes {
+  let w = @moonrpc.PbWriter::new()
+  if self.watch_id != 0 {
+    w.int64(1, self.watch_id)
+  }
+  w.to_bytes()
+}
+
+///|
+/// Decode a `WatchCancelRequest`.
+pub fn EtcdWatchCancelRequest::decode(
+  data : Bytes,
+) -> EtcdWatchCancelRequest raise @moonrpc.PbError {
+  let r = @moonrpc.PbReader::new(data)
+  let mut watch_id = 0L
+  while !r.eof() {
+    let (field, wire) = r.read_tag()
+    match field {
+      1 => watch_id = r.read_int64()
+      _ => r.skip(wire)
+    }
+  }
+  { watch_id, }
+}
+
+///|
+/// A `WatchRequest`, the `request_union` oneof of the bidi Watch stream: either a
+/// `Create` to open a watch or a `Cancel` to close one.
+pub(all) enum EtcdWatchRequest {
+  Create(EtcdWatchCreateRequest)
+  Cancel(EtcdWatchCancelRequest)
+} derive(Eq)
+
+///|
+/// Encode a `WatchRequest` (create_request=1, cancel_request=2).
+pub fn EtcdWatchRequest::encode(self : EtcdWatchRequest) -> Bytes {
+  let w = @moonrpc.PbWriter::new()
+  match self {
+    Create(c) => w.message_(1, c.encode())
+    Cancel(c) => w.message_(2, c.encode())
+  }
+  w.to_bytes()
+}
+
+///|
+/// Decode a `WatchRequest`; the last-set oneof arm wins, defaulting to an empty
+/// `Create`.
+pub fn EtcdWatchRequest::decode(
+  data : Bytes,
+) -> EtcdWatchRequest raise @moonrpc.PbError {
+  let r = @moonrpc.PbReader::new(data)
+  let mut result : EtcdWatchRequest = Create({
+    key: b"",
+    range_end: b"",
+    start_revision: 0,
+  })
+  while !r.eof() {
+    let (field, wire) = r.read_tag()
+    match field {
+      1 => result = Create(EtcdWatchCreateRequest::decode(r.read_bytes()))
+      2 => result = Cancel(EtcdWatchCancelRequest::decode(r.read_bytes()))
+      _ => r.skip(wire)
+    }
+  }
+  result
+}
+
+///|
+/// A `WatchResponse`: the server-assigned `watch_id`, the `created` / `canceled`
+/// lifecycle flags, and the batch of change `events` since the last response. A
+/// discovery watcher folds each event into add/remove of a service instance.
+pub(all) struct EtcdWatchResponse {
+  watch_id : Int64
+  created : Bool
+  canceled : Bool
+  events : Array[EtcdEvent]
+} derive(Eq)
+
+///|
+/// Encode a `WatchResponse` (watch_id=2, created=3, canceled=4, events=11 repeated).
+pub fn EtcdWatchResponse::encode(self : EtcdWatchResponse) -> Bytes {
+  let w = @moonrpc.PbWriter::new()
+  if self.watch_id != 0 {
+    w.int64(2, self.watch_id)
+  }
+  if self.created {
+    w.bool_(3, self.created)
+  }
+  if self.canceled {
+    w.bool_(4, self.canceled)
+  }
+  for ev in self.events {
+    w.message_(11, ev.encode())
+  }
+  w.to_bytes()
+}
+
+///|
+/// Decode a `WatchResponse`.
+pub fn EtcdWatchResponse::decode(
+  data : Bytes,
+) -> EtcdWatchResponse raise @moonrpc.PbError {
+  let r = @moonrpc.PbReader::new(data)
+  let mut watch_id = 0L
+  let mut created = false
+  let mut canceled = false
+  let events : Array[EtcdEvent] = []
+  while !r.eof() {
+    let (field, wire) = r.read_tag()
+    match field {
+      2 => watch_id = r.read_int64()
+      3 => created = r.read_bool()
+      4 => canceled = r.read_bool()
+      11 => events.push(EtcdEvent::decode(r.read_bytes()))
+      _ => r.skip(wire)
+    }
+  }
+  { watch_id, created, canceled, events }
+}
