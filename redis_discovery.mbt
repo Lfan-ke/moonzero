@@ -24,12 +24,26 @@ pub fn RedisDiscovery::new(
 }
 
 ///|
-/// The key prefix a service's instances live under: `<prefix><service>/`.
-fn RedisDiscovery::service_key_prefix(
-  self : RedisDiscovery,
+/// The key prefix a service's instances live under: `<prefix><service>/`. Exposed so
+/// the native RESP-socket path builds the exact same keys as the in-process driver.
+pub fn redis_service_prefix(prefix : String, service : String) -> String {
+  prefix + service + "/"
+}
+
+///|
+/// The key one instance of `service` lives at: `<prefix><service>/<address>`.
+pub fn redis_instance_key(
+  prefix : String,
   service : String,
+  endpoint : Endpoint,
 ) -> String {
-  self.prefix + service + "/"
+  redis_service_prefix(prefix, service) + endpoint.address()
+}
+
+///|
+/// The `SCAN MATCH` glob for every instance of `service`: `<prefix><service>/*`.
+pub fn redis_service_pattern(prefix : String, service : String) -> String {
+  redis_service_prefix(prefix, service) + "*"
 }
 
 ///|
@@ -39,7 +53,7 @@ fn RedisDiscovery::instance_key(
   service : String,
   endpoint : Endpoint,
 ) -> String {
-  self.service_key_prefix(service) + endpoint.address()
+  redis_instance_key(self.prefix, service, endpoint)
 }
 
 ///|
@@ -77,7 +91,7 @@ pub fn RedisDiscovery::resolve(
   self : RedisDiscovery,
   service : String,
 ) -> Array[Endpoint] raise {
-  let pattern = @utf8.encode(self.service_key_prefix(service) + "*")
+  let pattern = @utf8.encode(redis_service_pattern(self.prefix, service))
   let keys = self.client.scan_match(pattern, 100)
   let out : Array[Endpoint] = []
   for key in keys {
@@ -109,7 +123,7 @@ pub fn RedisDiscovery::deregister(
   self : RedisDiscovery,
   service : String,
 ) -> Unit raise {
-  let pattern = @utf8.encode(self.service_key_prefix(service) + "*")
+  let pattern = @utf8.encode(redis_service_pattern(self.prefix, service))
   let keys = self.client.scan_match(pattern, 100)
   let _ = self.client.del(keys)
 }

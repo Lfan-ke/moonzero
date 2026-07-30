@@ -17,7 +17,7 @@ pub suberror RespError {
 /// decode to `Null`, unifying with RESP3's explicit null (`_`). `BulkString` carries
 /// raw bytes (redis values are binary-safe); the text-line types carry the decoded
 /// string.
-pub enum RespValue {
+pub(all) enum RespValue {
   SimpleString(String)
   Error(String)
   Integer(Int64)

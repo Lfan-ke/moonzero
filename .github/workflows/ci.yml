@@ -48,3 +48,42 @@ jobs:
       - name: lint (fmt is clean)
         run: |
           moon fmt && git diff --exit-code
+
+  # The discovery drivers' real round trips run against live backends. redis speaks
+  # RESP over a socket; the native discov tests register, resolve, keep-alive, and
+  # deregister against it, gated on MOON_REDIS_TEST so the normal suite skips them.
+  discovery:
+    name: discovery drivers (native, live redis)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: install
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash
+          echo "$HOME/.moon/bin" >> $GITHUB_PATH
+
+      - name: post install
+        run: |
+          moon version --all
+          moon update
+
+      - name: discovery round trip against live redis
+        env:
+          MOON_REDIS_TEST: "1"
+          MOON_REDIS_HOST: "127.0.0.1"
+        run: moon test --target native

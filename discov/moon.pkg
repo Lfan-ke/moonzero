@@ -8,8 +8,11 @@ import {
   "Lfan-ke/moonzero",
   "moonbitlang/async/fs",
   "moonbitlang/async/io",
+  "moonbitlang/async/socket",
 }
 
 import {
   "moonbitlang/async",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
 } for "test"
