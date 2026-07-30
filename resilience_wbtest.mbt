@@ -194,6 +194,7 @@ test "resilience middlewares assemble onto an AsgiApp" {
   let ck = mc.as_clock()
   let assembled = Server::new(ServiceConf::new(), app)
     .use_(maxbytes(1024))
+    .use_(max_conns(MaxConns::new(100)))
     .use_(rate_limit(TokenBucket::new(10.0, now=0L), ck))
     .use_(breaker(Breaker::new(), ck))
     .use_(timeout(2000L, ck))
