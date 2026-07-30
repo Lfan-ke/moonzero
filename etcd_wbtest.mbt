@@ -82,3 +82,48 @@ test "etcd default (empty/zero) fields are omitted, per proto3" {
   let req : EtcdRangeRequest = { key: b"x", range_end: b"", limit: 0 }
   assert_eq(req.encode() == etcd_unhex("0a0178"), true)
 }
+
+///|
+test "etcd Lease messages encode to the exact protobuf bytes and round-trip" {
+  let grant : EtcdLeaseGrantRequest = { ttl: 60, id: 1234 }
+  assert_eq(grant.encode() == etcd_unhex("083c10d209"), true)
+  assert_eq(EtcdLeaseGrantRequest::decode(grant.encode()) == grant, true)
+  let granted : EtcdLeaseGrantResponse = { id: 1234, ttl: 60, error: "" }
+  assert_eq(granted.encode() == etcd_unhex("10d209183c"), true)
+  assert_eq(EtcdLeaseGrantResponse::decode(granted.encode()) == granted, true)
+  let ka : EtcdLeaseKeepAliveRequest = { id: 1234 }
+  assert_eq(ka.encode() == etcd_unhex("08d209"), true)
+  assert_eq(EtcdLeaseKeepAliveRequest::decode(ka.encode()) == ka, true)
+  let kar : EtcdLeaseKeepAliveResponse = { id: 1234, ttl: 59 }
+  assert_eq(kar.encode() == etcd_unhex("10d209183b"), true)
+  assert_eq(EtcdLeaseKeepAliveResponse::decode(kar.encode()) == kar, true)
+}
+
+///|
+test "etcd watch Event encodes to the exact protobuf bytes, PUT vs DELETE" {
+  // A PUT event carries the full key/value; type PUT (0) is the proto3 default so it
+  // is omitted from the wire.
+  let put : EtcdEvent = {
+    event_type: Put,
+    kv: {
+      ..EtcdKeyValue::empty(),
+      key: b"svc/a",
+      value: b"1.2.3.4",
+      mod_revision: 9,
+    },
+  }
+  assert_eq(
+    put.encode() == etcd_unhex("12120a057376632f6118092a07312e322e332e34"),
+    true,
+  )
+  assert_eq(EtcdEvent::decode(put.encode()) == put, true)
+  // A DELETE event writes the type explicitly and just the key.
+  let del : EtcdEvent = {
+    event_type: Delete,
+    kv: { ..EtcdKeyValue::empty(), key: b"svc/a" },
+  }
+  assert_eq(del.encode() == etcd_unhex("080112070a057376632f61"), true)
+  let decoded = EtcdEvent::decode(del.encode())
+  assert_eq(decoded.event_type == Delete, true)
+  assert_eq(decoded.kv.key == b"svc/a", true)
+}

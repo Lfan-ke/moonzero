@@ -215,3 +215,232 @@ pub fn EtcdPutRequest::decode(
   }
   { key, value, lease }
 }
+
+///|
+/// A `LeaseGrantRequest`: ask etcd for a lease living `ttl` seconds (`id` 0 lets the
+/// server assign one). A registered service key attaches to the lease and vanishes
+/// when the lease expires — go-zero's instance liveness mechanism.
+pub(all) struct EtcdLeaseGrantRequest {
+  ttl : Int64
+  id : Int64
+} derive(Eq)
+
+///|
+/// Encode a `LeaseGrantRequest` (TTL=1, ID=2).
+pub fn EtcdLeaseGrantRequest::encode(self : EtcdLeaseGrantRequest) -> Bytes {
+  let w = @moonrpc.PbWriter::new()
+  if self.ttl != 0 {
+    w.int64(1, self.ttl)
+  }
+  if self.id != 0 {
+    w.int64(2, self.id)
+  }
+  w.to_bytes()
+}
+
+///|
+/// Decode a `LeaseGrantRequest`.
+pub fn EtcdLeaseGrantRequest::decode(
+  data : Bytes,
+) -> EtcdLeaseGrantRequest raise @moonrpc.PbError {
+  let r = @moonrpc.PbReader::new(data)
+  let mut ttl = 0L
+  let mut id = 0L
+  while !r.eof() {
+    let (field, wire) = r.read_tag()
+    match field {
+      1 => ttl = r.read_int64()
+      2 => id = r.read_int64()
+      _ => r.skip(wire)
+    }
+  }
+  { ttl, id }
+}
+
+///|
+/// A `LeaseGrantResponse`: the granted lease `id`, its actual `ttl`, and an `error`
+/// string when the grant failed.
+pub(all) struct EtcdLeaseGrantResponse {
+  id : Int64
+  ttl : Int64
+  error : String
+} derive(Eq)
+
+///|
+/// Encode a `LeaseGrantResponse` (ID=2, TTL=3, error=4).
+pub fn EtcdLeaseGrantResponse::encode(self : EtcdLeaseGrantResponse) -> Bytes {
+  let w = @moonrpc.PbWriter::new()
+  if self.id != 0 {
+    w.int64(2, self.id)
+  }
+  if self.ttl != 0 {
+    w.int64(3, self.ttl)
+  }
+  if self.error.length() > 0 {
+    w.string_(4, self.error)
+  }
+  w.to_bytes()
+}
+
+///|
+/// Decode a `LeaseGrantResponse`.
+pub fn EtcdLeaseGrantResponse::decode(
+  data : Bytes,
+) -> EtcdLeaseGrantResponse raise @moonrpc.PbError {
+  let r = @moonrpc.PbReader::new(data)
+  let mut id = 0L
+  let mut ttl = 0L
+  let mut error = ""
+  while !r.eof() {
+    let (field, wire) = r.read_tag()
+    match field {
+      2 => id = r.read_int64()
+      3 => ttl = r.read_int64()
+      4 => error = r.read_string()
+      _ => r.skip(wire)
+    }
+  }
+  { id, ttl, error }
+}
+
+///|
+/// A `LeaseKeepAliveRequest`: renew lease `id` before it expires. A discovery client
+/// streams these to keep its instance registered.
+pub(all) struct EtcdLeaseKeepAliveRequest {
+  id : Int64
+} derive(Eq)
+
+///|
+/// Encode a `LeaseKeepAliveRequest` (ID=1).
+pub fn EtcdLeaseKeepAliveRequest::encode(
+  self : EtcdLeaseKeepAliveRequest,
+) -> Bytes {
+  let w = @moonrpc.PbWriter::new()
+  if self.id != 0 {
+    w.int64(1, self.id)
+  }
+  w.to_bytes()
+}
+
+///|
+/// Decode a `LeaseKeepAliveRequest`.
+pub fn EtcdLeaseKeepAliveRequest::decode(
+  data : Bytes,
+) -> EtcdLeaseKeepAliveRequest raise @moonrpc.PbError {
+  let r = @moonrpc.PbReader::new(data)
+  let mut id = 0L
+  while !r.eof() {
+    let (field, wire) = r.read_tag()
+    match field {
+      1 => id = r.read_int64()
+      _ => r.skip(wire)
+    }
+  }
+  { id, }
+}
+
+///|
+/// A `LeaseKeepAliveResponse`: the renewed lease `id` and its remaining `ttl` (0 =
+/// the lease has expired).
+pub(all) struct EtcdLeaseKeepAliveResponse {
+  id : Int64
+  ttl : Int64
+} derive(Eq)
+
+///|
+/// Encode a `LeaseKeepAliveResponse` (ID=2, TTL=3).
+pub fn EtcdLeaseKeepAliveResponse::encode(
+  self : EtcdLeaseKeepAliveResponse,
+) -> Bytes {
+  let w = @moonrpc.PbWriter::new()
+  if self.id != 0 {
+    w.int64(2, self.id)
+  }
+  if self.ttl != 0 {
+    w.int64(3, self.ttl)
+  }
+  w.to_bytes()
+}
+
+///|
+/// Decode a `LeaseKeepAliveResponse`.
+pub fn EtcdLeaseKeepAliveResponse::decode(
+  data : Bytes,
+) -> EtcdLeaseKeepAliveResponse raise @moonrpc.PbError {
+  let r = @moonrpc.PbReader::new(data)
+  let mut id = 0L
+  let mut ttl = 0L
+  while !r.eof() {
+    let (field, wire) = r.read_tag()
+    match field {
+      2 => id = r.read_int64()
+      3 => ttl = r.read_int64()
+      _ => r.skip(wire)
+    }
+  }
+  { id, ttl }
+}
+
+///|
+/// The kind of change a watch `Event` reports (`mvccpb.Event.EventType`): a key was
+/// `Put` (created or updated) or `Delete`d.
+pub(all) enum EtcdEventType {
+  Put
+  Delete
+} derive(Eq)
+
+///|
+/// The protobuf enum number of an event type (`PUT` = 0, `DELETE` = 1).
+pub fn EtcdEventType::to_int(self : EtcdEventType) -> Int {
+  match self {
+    Put => 0
+    Delete => 1
+  }
+}
+
+///|
+/// The event type for a protobuf enum number; unknown numbers read as `Put`.
+pub fn EtcdEventType::from_int(n : Int) -> EtcdEventType {
+  if n == 1 {
+    Delete
+  } else {
+    Put
+  }
+}
+
+///|
+/// A watch `Event` (`mvccpb.Event`): a change to one key, carrying the resulting
+/// `KeyValue` (for a delete, the key with cleared metadata). This is what a discovery
+/// watcher folds into add/remove of a service instance.
+pub(all) struct EtcdEvent {
+  event_type : EtcdEventType
+  kv : EtcdKeyValue
+} derive(Eq)
+
+///|
+/// Encode an `Event` (type=1, kv=2). `PUT` (0) is the proto3 default and omitted.
+pub fn EtcdEvent::encode(self : EtcdEvent) -> Bytes {
+  let w = @moonrpc.PbWriter::new()
+  if self.event_type.to_int() != 0 {
+    w.int32(1, self.event_type.to_int())
+  }
+  w.message_(2, self.kv.encode())
+  w.to_bytes()
+}
+
+///|
+/// Decode an `Event`.
+pub fn EtcdEvent::decode(data : Bytes) -> EtcdEvent raise @moonrpc.PbError {
+  let r = @moonrpc.PbReader::new(data)
+  let mut event_type = EtcdEventType::Put
+  let mut kv = EtcdKeyValue::empty()
+  while !r.eof() {
+    let (field, wire) = r.read_tag()
+    match field {
+      1 => event_type = EtcdEventType::from_int(r.read_int32())
+      2 => kv = EtcdKeyValue::decode(r.read_bytes())
+      _ => r.skip(wire)
+    }
+  }
+  { event_type, kv }
+}
