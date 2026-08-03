@@ -157,6 +157,152 @@ pub fn ServerMetrics::latency(self : ServerMetrics) -> Histogram {
 }
 
 ///|
+/// The content type a `/metrics` scrape carries so a Prometheus server parses the
+/// body as the text exposition format (`version=0.0.4`).
+pub let exposition_content_type : String = "text/plain; version=0.0.4; charset=utf-8"
+
+///|
+/// Escape a label value for the text exposition format: backslash, double quote,
+/// and newline are backslash-escaped; every other byte passes through unchanged.
+fn escape_label(v : String) -> String {
+  let sb = StringBuilder::new()
+  for i = 0; i < v.length(); i = i + 1 {
+    let c = v[i]
+    if c == '\\' {
+      sb.write_string("\\\\")
+    } else if c == '"' {
+      sb.write_string("\\\"")
+    } else if c == '\n' {
+      sb.write_string("\\n")
+    } else {
+      sb.write_char(c.unsafe_to_char())
+    }
+  }
+  sb.to_string()
+}
+
+///|
+/// Render a `{k="v",...}` label set (empty string when there are no labels), each
+/// value escaped per the exposition spec.
+fn labelset(pairs : Array[(String, String)]) -> String {
+  if pairs.length() == 0 {
+    return ""
+  }
+  let sb = StringBuilder::new()
+  sb.write_char('{')
+  for i = 0; i < pairs.length(); i = i + 1 {
+    if i > 0 {
+      sb.write_char(',')
+    }
+    sb.write_string(pairs[i].0)
+    sb.write_string("=\"")
+    sb.write_string(escape_label(pairs[i].1))
+    sb.write_char('"')
+  }
+  sb.write_char('}')
+  sb.to_string()
+}
+
+///|
+/// Render this counter vector as Prometheus text exposition: a `# HELP` line, a
+/// `# TYPE <name> counter` line, then one `<name>{<label>="<value>"} <count>`
+/// series per observed label (sorted for a stable scrape). `label` names the
+/// single dimension the vector partitions on.
+pub fn CounterVec::to_exposition(
+  self : CounterVec,
+  name~ : String,
+  help~ : String,
+  label? : String = "label",
+) -> String {
+  let sb = StringBuilder::new()
+  sb.write_string("# HELP " + name + " " + help + "\n")
+  sb.write_string("# TYPE " + name + " counter\n")
+  let keys = self.labels()
+  keys.sort()
+  for k in keys {
+    sb.write_string(
+      name + labelset([(label, k)]) + " " + self.value(k).to_string() + "\n",
+    )
+  }
+  sb.to_string()
+}
+
+///|
+/// Render this histogram as Prometheus text exposition: a `# HELP` line, a
+/// `# TYPE <name> histogram` line, the cumulative `<name>_bucket{le="<bound>"}`
+/// series capped by the `le="+Inf"` bucket (every observation, including those
+/// above the last bound), then `<name>_sum` and `<name>_count`.
+pub fn Histogram::to_exposition(
+  self : Histogram,
+  name~ : String,
+  help~ : String,
+) -> String {
+  let sb = StringBuilder::new()
+  sb.write_string("# HELP " + name + " " + help + "\n")
+  sb.write_string("# TYPE " + name + " histogram\n")
+  for i = 0; i < self.bounds.length(); i = i + 1 {
+    sb.write_string(
+      name +
+      "_bucket" +
+      labelset([("le", self.bounds[i].to_string())]) +
+      " " +
+      self.bucket[i].to_string() +
+      "\n",
+    )
+  }
+  sb.write_string(
+    name +
+    "_bucket" +
+    labelset([("le", "+Inf")]) +
+    " " +
+    self.count.to_string() +
+    "\n",
+  )
+  sb.write_string(name + "_sum " + self.sum.to_string() + "\n")
+  sb.write_string(name + "_count " + self.count.to_string() + "\n")
+  sb.to_string()
+}
+
+///|
+/// Render the whole server metric set as one exposition document a Prometheus
+/// server can scrape: the latency histogram followed by the request counter,
+/// under go-zero's canonical metric names. go-zero splits the counter into
+/// `path`/`method`/`code` labels; moonzero keeps the request signature as one
+/// `request` label.
+pub fn ServerMetrics::to_exposition(self : ServerMetrics) -> String {
+  self.latency.to_exposition(
+    name="http_server_requests_duration_ms",
+    help="http server requests duration(ms).",
+  ) +
+  self.requests.to_exposition(
+    name="http_server_requests_code_total",
+    help="http server requests code count.",
+    label="request",
+  )
+}
+
+///|
+/// A handler that serves the current metric set in the text exposition format,
+/// with the Prometheus content type — the scrape target go-zero's
+/// `prometheus.StartAgent` publishes at `/metrics`.
+pub fn metrics_handler(m : ServerMetrics) -> @moonapi.ApiHandler {
+  _ctx => {
+    @moonasgi.Response::new(
+      200,
+      [("content-type", exposition_content_type)],
+      @utf8.encode(m.to_exposition()),
+    )
+  }
+}
+
+///|
+/// Register the `GET /metrics` scrape endpoint on `app` (← go-zero's
+/// `prometheus.StartAgent`), so a Prometheus server can pull the exposition.
+pub fn mount_metrics(app : @moonapi.App, m : ServerMetrics) -> Unit {
+  app.get("/metrics", metrics_handler(m))
+}
+
+///|
 /// Metrics middleware (← go-zero's `prometheus` interceptor): time each HTTP
 /// request on the shared clock and, when the response starts, count it under
 /// `"<METHOD> <path> <status>"` and record its latency in milliseconds. The
