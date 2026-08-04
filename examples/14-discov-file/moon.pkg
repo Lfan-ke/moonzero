@@ -1,0 +1,11 @@
+// The native discovery driver reads and writes a real file through
+// `moonbitlang/async`'s fs, so this example is native-only, like the driver.
+supported_targets = "native"
+
+import {
+  "Lfan-ke/moonzero",
+  "Lfan-ke/moonzero/discov",
+  "moonbitlang/async",
+}
+
+pkgtype(kind: "executable")

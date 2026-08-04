@@ -1,0 +1,12 @@
+// Drives each resilience middleware over the ASGI onion in-process, awaiting the
+// async app it wraps — native-only, like moonzero's other async edges.
+supported_targets = "native"
+
+import {
+  "Lfan-ke/moonzero",
+  "Lfan-ke/moonapi",
+  "Lfan-ke/moonasgi",
+  "moonbitlang/async",
+}
+
+pkgtype(kind: "executable")

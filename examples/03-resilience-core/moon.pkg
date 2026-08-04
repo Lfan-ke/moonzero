@@ -1,0 +1,5 @@
+import {
+  "Lfan-ke/moonzero",
+}
+
+pkgtype(kind: "executable")

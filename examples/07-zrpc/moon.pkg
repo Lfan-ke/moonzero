@@ -1,0 +1,7 @@
+import {
+  "Lfan-ke/moonzero",
+  "Lfan-ke/moonrpc",
+  "moonbitlang/core/encoding/utf8",
+}
+
+pkgtype(kind: "executable")

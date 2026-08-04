@@ -18,6 +18,7 @@
 /// Prometheus exposition a `/metrics` scrape would read back.
 ///
 ///     moon run --target native examples/00-metrics
+#coverage.skip
 async fn main {
   let app = @moonapi.App::new()
   let api = @moonzero.Group::new(app, "/api/v1")
