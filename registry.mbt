@@ -1,6 +1,8 @@
 ///|
 /// A service endpoint (← go-zero's `discov` target): the host and port an
-/// instance listens on, plus a routing weight the balancer honours (default `1`).
+/// instance listens on, plus a routing weight (default `1`). It is carried through registration and
+/// snapshots for a weighted balancer; the balancers shipping today — round-robin and
+/// pick-first — do not read it yet.
 pub(all) struct Endpoint {
   host : String
   port : Int
