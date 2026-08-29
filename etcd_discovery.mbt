@@ -19,7 +19,7 @@ pub fn EtcdDiscovery::new(
   client : EtcdClient,
   prefix? : String = "moonzero/",
 ) -> EtcdDiscovery {
-  { client, prefix }
+  { client, prefix, }
 }
 
 ///|
@@ -75,7 +75,7 @@ pub fn EtcdDiscovery::register(
   endpoint : Endpoint,
   ttl? : Int64 = 10,
 ) -> Int64 raise {
-  let lease = self.client.lease_grant({ ttl, id: 0 })
+  let lease = self.client.lease_grant({ ttl, id: 0, })
   let key = self.service_prefix(service) + lease.id.to_string()
   let _ = self.client.put({
     key: @utf8.encode(key),

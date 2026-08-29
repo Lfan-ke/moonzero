@@ -38,7 +38,7 @@ pub struct FileRegistry {
 /// is treated as an empty registry, so a reader can start before the publisher has
 /// written anything and pick the state up on the first `reload`/`watch`.
 pub async fn FileRegistry::load(path : String) -> FileRegistry {
-  { path, reg: read_snapshot(path) }
+  { path, reg: read_snapshot(path), }
 }
 
 ///|

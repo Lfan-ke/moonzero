@@ -58,7 +58,7 @@ fn event_str(e : @moonzero.RegistryEvent) -> String {
 fn addrs(eps : Array[@moonzero.Endpoint]) -> String {
   let a = eps.map(e => e.address())
   a.sort()
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_char('[')
   for i = 0; i < a.length(); i = i + 1 {
     if i > 0 {
@@ -72,7 +72,7 @@ fn addrs(eps : Array[@moonzero.Endpoint]) -> String {
 
 ///|
 fn join(items : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_char('[')
   for i = 0; i < items.length(); i = i + 1 {
     if i > 0 {

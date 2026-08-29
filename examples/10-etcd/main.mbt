@@ -58,7 +58,7 @@ fn main {
     let client = @moonzero.EtcdClient::new(
       @moonzero.RpcChannel::connect(mock_etcd()),
     )
-    let lease = client.lease_grant({ ttl: 30L, id: 0L })
+    let lease = client.lease_grant({ ttl: 30L, id: 0L, })
     println(
       "LeaseGrant id=" + lease.id.to_string() + " ttl=" + lease.ttl.to_string(),
     )
@@ -121,14 +121,14 @@ fn watch_event(resp : @moonzero.EtcdWatchResponse) -> String {
 /// the same server an `EtcdDiscovery` drives, minus the network.
 fn mock_etcd() -> @moonzero.RpcServer {
   let store : Map[String, String] = Map([])
-  let next_lease : Ref[Int64] = { val: 1000L }
+  let next_lease : Ref[Int64] = { val: 1000L, }
   let server = @moonzero.RpcServer::new(@moonzero.RpcServerConf::new())
   let kv = server.group("etcdserverpb.KV")
   kv.register("Put", req => {
     try {
       let p = @moonzero.EtcdPutRequest::decode(req)
       store[@utf8.decode_lossy(p.key[:])] = @utf8.decode_lossy(p.value[:])
-      @moonzero.EtcdPutResponse::{ prev_kv: @moonzero.EtcdKeyValue::empty() }.encode()
+      @moonzero.EtcdPutResponse::{ prev_kv: @moonzero.EtcdKeyValue::empty(), }.encode()
     } catch {
       _ => b""
     }
@@ -148,7 +148,7 @@ fn mock_etcd() -> @moonzero.RpcServer {
           })
         }
       }
-      @moonzero.EtcdRangeResponse::{ kvs, count: kvs.length().to_int64() }.encode()
+      @moonzero.EtcdRangeResponse::{ kvs, count: kvs.length().to_int64(), }.encode()
     } catch {
       _ => b""
     }
@@ -182,7 +182,7 @@ fn mock_etcd() -> @moonzero.RpcServer {
       let g = @moonzero.EtcdLeaseGrantRequest::decode(req)
       let id = next_lease.val
       next_lease.val = next_lease.val + 1L
-      @moonzero.EtcdLeaseGrantResponse::{ id, ttl: g.ttl, error: "" }.encode()
+      @moonzero.EtcdLeaseGrantResponse::{ id, ttl: g.ttl, error: "", }.encode()
     } catch {
       _ => b""
     }
@@ -259,7 +259,7 @@ fn first_value(resp : @moonzero.EtcdRangeResponse) -> String {
 fn addrs(eps : Array[@moonzero.Endpoint]) -> String {
   let a = eps.map(e => e.address())
   a.sort()
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_char('[')
   for i = 0; i < a.length(); i = i + 1 {
     if i > 0 {

@@ -13,7 +13,7 @@ struct FakeRedis {
 
 ///|
 fn FakeRedis::new() -> FakeRedis {
-  { store: Map([]) }
+  { store: Map([]), }
 }
 
 ///|

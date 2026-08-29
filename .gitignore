@@ -3,3 +3,6 @@
 !.moonignore
 _build/
 target/
+
+# example packages regenerate these; only the library interface is tracked
+examples/*/pkg.generated.mbti

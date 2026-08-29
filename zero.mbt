@@ -52,7 +52,7 @@ pub fn ServiceConf::new(
   timeout_ms? : Int = 3000,
   log_level? : LogLevel = Info,
 ) -> ServiceConf {
-  { name, host, port, timeout_ms, log_level }
+  { name, host, port, timeout_ms, log_level, }
 }
 
 ///|
@@ -70,13 +70,13 @@ pub struct Server {
 ///|
 /// Assemble a service from config and a moonapi application.
 pub fn Server::new(conf : ServiceConf, app : @moonapi.App) -> Server {
-  { conf, handler: app.to_asgi() }
+  { conf, handler: app.to_asgi(), }
 }
 
 ///|
 /// Wrap the current application in another middleware layer (outermost last).
 pub fn Server::use_(self : Server, mw : Middleware) -> Server {
-  { conf: self.conf, handler: mw(self.handler) }
+  { conf: self.conf, handler: mw(self.handler), }
 }
 
 ///|

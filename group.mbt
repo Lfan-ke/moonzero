@@ -29,7 +29,7 @@ pub struct Group {
 ///|
 /// Open a group that prefixes every route it registers with `prefix` on `app`.
 pub fn Group::new(app : @moonapi.App, prefix : String) -> Group {
-  { app, prefix }
+  { app, prefix, }
 }
 
 ///|

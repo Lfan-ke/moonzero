@@ -103,7 +103,7 @@ pub fn http1_parse_response(data : Bytes) -> Http1Response raise Http1Error {
       }
     }
   }
-  { status, headers, body }
+  { status, headers, body, }
 }
 
 ///|

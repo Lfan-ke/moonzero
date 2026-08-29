@@ -10,7 +10,7 @@ pub(all) struct Endpoint {
 ///|
 /// Build an endpoint; `weight` defaults to `1`, matching an unweighted instance.
 pub fn Endpoint::new(host : String, port : Int, weight? : Int = 1) -> Endpoint {
-  { host, port, weight }
+  { host, port, weight, }
 }
 
 ///|
@@ -34,7 +34,7 @@ pub struct InMemoryRegistry {
 ///|
 /// A fresh, empty registry at revision `0`.
 pub fn InMemoryRegistry::new() -> InMemoryRegistry {
-  { instances: Map([]), seq: 0, revision: 0 }
+  { instances: Map([]), seq: 0, revision: 0, }
 }
 
 ///|
@@ -130,7 +130,7 @@ pub struct RoundRobin {
 ///|
 /// A round-robin balancer starting at the first instance.
 pub fn RoundRobin::new() -> RoundRobin {
-  { cursor: 0 }
+  { cursor: 0, }
 }
 
 ///|

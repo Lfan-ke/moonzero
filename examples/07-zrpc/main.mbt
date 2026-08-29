@@ -119,7 +119,7 @@ fn dec(b : Bytes) -> String {
 
 ///|
 fn join(items : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_char('[')
   for i = 0; i < items.length(); i = i + 1 {
     if i > 0 {

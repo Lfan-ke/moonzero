@@ -24,7 +24,7 @@ async fn main {
   let api = @moonzero.Group::new(app, "/api/v1")
   api.get("/ping", _ctx => @moonapi.text(200, "pong"))
   let m = @moonzero.ServerMetrics::new()
-  let elapsed : Ref[Int64] = { val: 0L }
+  let elapsed : Ref[Int64] = { val: 0L, }
   let clock = @moonzero.Clock::new(() => {
     let now = elapsed.val
     elapsed.val = now + 23L
@@ -58,7 +58,7 @@ async fn ping(
   let scope = @moonasgi.Scope::Http(
     @moonasgi.HttpScope::new(http_method=verb, path~),
   )
-  let sent : Ref[Bool] = { val: false }
+  let sent : Ref[Bool] = { val: false, }
   let receive : @moonasgi.Receive = () => {
     if sent.val {
       @moonasgi.Event::HttpDisconnect

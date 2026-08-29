@@ -376,7 +376,7 @@ pub struct RpcCluster {
 ///|
 /// An empty cluster.
 pub fn RpcCluster::new() -> RpcCluster {
-  { servers: Map([]) }
+  { servers: Map([]), }
 }
 
 ///|
@@ -425,7 +425,7 @@ pub fn LoadBalancedChannel::new(
   service : String,
   balancer? : Balancer = Balancer::round_robin(),
 ) -> LoadBalancedChannel {
-  { resolve, cluster, balancer, service }
+  { resolve, cluster, balancer, service, }
 }
 
 ///|

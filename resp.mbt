@@ -104,7 +104,7 @@ pub struct RespReader {
 ///|
 /// A reader positioned at the start of `data`.
 pub fn RespReader::new(data : Bytes) -> RespReader {
-  { data, pos: 0 }
+  { data, pos: 0, }
 }
 
 ///|

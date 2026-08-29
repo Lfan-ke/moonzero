@@ -43,7 +43,7 @@ fn main {
 fn addrs(eps : Array[@moonzero.Endpoint]) -> String {
   let a = eps.map(e => e.address())
   a.sort()
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_char('[')
   for i = 0; i < a.length(); i = i + 1 {
     if i > 0 {

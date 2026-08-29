@@ -29,7 +29,7 @@ fn etcd_unhex(s : String) -> Bytes {
 
 ///|
 test "etcd RangeRequest encodes to the exact protobuf bytes protobuf produces" {
-  let req : EtcdRangeRequest = { key: b"foo", range_end: b"fop", limit: 100 }
+  let req : EtcdRangeRequest = { key: b"foo", range_end: b"fop", limit: 100, }
   // protobuf: RangeRequest(key="foo", range_end="fop", limit=100)
   assert_eq(req.encode() == etcd_unhex("0a03666f6f1203666f701864"), true)
   assert_eq(EtcdRangeRequest::decode(req.encode()) == req, true)
@@ -53,7 +53,7 @@ test "etcd KeyValue encodes to the exact protobuf bytes and round-trips" {
 
 ///|
 test "etcd PutRequest encodes to the exact protobuf bytes and round-trips" {
-  let put : EtcdPutRequest = { key: b"k", value: b"v", lease: 7 }
+  let put : EtcdPutRequest = { key: b"k", value: b"v", lease: 7, }
   // protobuf: PutRequest(key="k", value="v", lease=7)
   assert_eq(put.encode() == etcd_unhex("0a016b1201761807"), true)
   assert_eq(EtcdPutRequest::decode(put.encode()) == put, true)
@@ -63,8 +63,8 @@ test "etcd PutRequest encodes to the exact protobuf bytes and round-trips" {
 test "etcd RangeResponse carries nested KeyValues and a count through a round-trip" {
   let resp : EtcdRangeResponse = {
     kvs: [
-      { ..EtcdKeyValue::empty(), key: b"a", value: b"1", mod_revision: 5 },
-      { ..EtcdKeyValue::empty(), key: b"b", value: b"2", mod_revision: 6 },
+      { ..EtcdKeyValue::empty(), key: b"a", value: b"1", mod_revision: 5, },
+      { ..EtcdKeyValue::empty(), key: b"b", value: b"2", mod_revision: 6, },
     ],
     count: 2,
   }
@@ -79,22 +79,22 @@ test "etcd RangeResponse carries nested KeyValues and a count through a round-tr
 ///|
 test "etcd default (empty/zero) fields are omitted, per proto3" {
   // A RangeRequest for a single key with no range_end or limit encodes only field 1.
-  let req : EtcdRangeRequest = { key: b"x", range_end: b"", limit: 0 }
+  let req : EtcdRangeRequest = { key: b"x", range_end: b"", limit: 0, }
   assert_eq(req.encode() == etcd_unhex("0a0178"), true)
 }
 
 ///|
 test "etcd Lease messages encode to the exact protobuf bytes and round-trip" {
-  let grant : EtcdLeaseGrantRequest = { ttl: 60, id: 1234 }
+  let grant : EtcdLeaseGrantRequest = { ttl: 60, id: 1234, }
   assert_eq(grant.encode() == etcd_unhex("083c10d209"), true)
   assert_eq(EtcdLeaseGrantRequest::decode(grant.encode()) == grant, true)
-  let granted : EtcdLeaseGrantResponse = { id: 1234, ttl: 60, error: "" }
+  let granted : EtcdLeaseGrantResponse = { id: 1234, ttl: 60, error: "", }
   assert_eq(granted.encode() == etcd_unhex("10d209183c"), true)
   assert_eq(EtcdLeaseGrantResponse::decode(granted.encode()) == granted, true)
-  let ka : EtcdLeaseKeepAliveRequest = { id: 1234 }
+  let ka : EtcdLeaseKeepAliveRequest = { id: 1234, }
   assert_eq(ka.encode() == etcd_unhex("08d209"), true)
   assert_eq(EtcdLeaseKeepAliveRequest::decode(ka.encode()) == ka, true)
-  let kar : EtcdLeaseKeepAliveResponse = { id: 1234, ttl: 59 }
+  let kar : EtcdLeaseKeepAliveResponse = { id: 1234, ttl: 59, }
   assert_eq(kar.encode() == etcd_unhex("10d209183b"), true)
   assert_eq(EtcdLeaseKeepAliveResponse::decode(kar.encode()) == kar, true)
 }
@@ -120,7 +120,7 @@ test "etcd watch Event encodes to the exact protobuf bytes, PUT vs DELETE" {
   // A DELETE event writes the type explicitly and just the key.
   let del : EtcdEvent = {
     event_type: Delete,
-    kv: { ..EtcdKeyValue::empty(), key: b"svc/a" },
+    kv: { ..EtcdKeyValue::empty(), key: b"svc/a", },
   }
   assert_eq(del.encode() == etcd_unhex("080112070a057376632f61"), true)
   let decoded = EtcdEvent::decode(del.encode())
@@ -145,7 +145,7 @@ test "etcd Watch create/cancel requests encode to the exact protobuf bytes" {
   )
   assert_eq(EtcdWatchRequest::decode(create_req.encode()) == create_req, true)
   // cancel_request (field 2)
-  let cancel_req : EtcdWatchRequest = Cancel({ watch_id: 42 })
+  let cancel_req : EtcdWatchRequest = Cancel({ watch_id: 42, })
   assert_eq(cancel_req.encode() == etcd_unhex("1202082a"), true)
   assert_eq(EtcdWatchRequest::decode(cancel_req.encode()) == cancel_req, true)
 }
@@ -159,7 +159,7 @@ test "etcd WatchResponse carries lifecycle flags and events through a round-trip
     events: [
       {
         event_type: Put,
-        kv: { ..EtcdKeyValue::empty(), key: b"svc/a", value: b"h1" },
+        kv: { ..EtcdKeyValue::empty(), key: b"svc/a", value: b"h1", },
       },
     ],
   }
@@ -191,11 +191,11 @@ test "etcd DeleteRange and PutResponse encode to the exact protobuf bytes" {
     prev_kv: false,
   }
   assert_eq(del_range.encode() == etcd_unhex("0a047376632f120473766330"), true)
-  let deleted : EtcdDeleteRangeResponse = { deleted: 1, prev_kvs: [] }
+  let deleted : EtcdDeleteRangeResponse = { deleted: 1, prev_kvs: [], }
   assert_eq(deleted.encode() == etcd_unhex("1001"), true)
   assert_eq(EtcdDeleteRangeResponse::decode(deleted.encode()) == deleted, true)
   let put_resp : EtcdPutResponse = {
-    prev_kv: { ..EtcdKeyValue::empty(), key: b"svc/a", value: b"old" },
+    prev_kv: { ..EtcdKeyValue::empty(), key: b"svc/a", value: b"old", },
   }
   assert_eq(
     put_resp.encode() == etcd_unhex("120c0a057376632f612a036f6c64"),

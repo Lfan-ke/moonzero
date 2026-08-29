@@ -22,7 +22,7 @@ struct FakeConsul {
 
 ///|
 fn FakeConsul::new() -> FakeConsul {
-  { services: Map([]) }
+  { services: Map([]), }
 }
 
 ///|

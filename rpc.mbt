@@ -19,7 +19,7 @@ pub fn RpcServerConf::new(
   port? : Int = 8080,
   timeout_ms? : Int = 2000,
 ) -> RpcServerConf {
-  { name, host, port, timeout_ms }
+  { name, host, port, timeout_ms, }
 }
 
 ///|
@@ -184,7 +184,7 @@ pub fn RpcServer::register_bidi_streaming(
 /// `package.Service` name — go-zero's per-service registration, without
 /// repeating the service name on each method.
 pub fn RpcServer::group(self : RpcServer, service : String) -> RpcGroup {
-  { server: self, service }
+  { server: self, service, }
 }
 
 ///|
@@ -244,7 +244,7 @@ pub fn RpcGroup::register(
   name : String,
   handler : RpcHandler,
 ) -> Unit {
-  self.server.register({ service: self.service, name }, handler)
+  self.server.register({ service: self.service, name, }, handler)
 }
 
 ///|
@@ -255,7 +255,7 @@ pub fn RpcGroup::register_server_streaming(
   handler : ServerStreamHandler,
 ) -> Unit {
   self.server.register_server_streaming(
-    { service: self.service, name },
+    { service: self.service, name, },
     handler,
   )
 }
@@ -268,7 +268,7 @@ pub fn RpcGroup::register_client_streaming(
   handler : ClientStreamHandler,
 ) -> Unit {
   self.server.register_client_streaming(
-    { service: self.service, name },
+    { service: self.service, name, },
     handler,
   )
 }
@@ -280,5 +280,5 @@ pub fn RpcGroup::register_bidi_streaming(
   name : String,
   factory : BidiStreamFactory,
 ) -> Unit {
-  self.server.register_bidi_streaming({ service: self.service, name }, factory)
+  self.server.register_bidi_streaming({ service: self.service, name, }, factory)
 }

@@ -20,7 +20,7 @@ pub struct EtcdSocket {
 ///|
 /// Open a gRPC connection to the etcd at `host:port` (etcd serves client gRPC on 2379).
 pub async fn EtcdSocket::connect(host : String, port : Int) -> EtcdSocket {
-  { channel: @net.Channel::connect(host, port) }
+  { channel: @net.Channel::connect(host, port), }
 }
 
 ///|

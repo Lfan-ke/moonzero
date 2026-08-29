@@ -38,7 +38,7 @@ fn stateful_etcd_server() -> RpcServer {
     try {
       let p = EtcdPutRequest::decode(req)
       store[@utf8.decode_lossy(p.key[:])] = @utf8.decode_lossy(p.value[:])
-      EtcdPutResponse::{ prev_kv: EtcdKeyValue::empty() }.encode()
+      EtcdPutResponse::{ prev_kv: EtcdKeyValue::empty(), }.encode()
     } catch {
       _ => b""
     }
@@ -58,7 +58,7 @@ fn stateful_etcd_server() -> RpcServer {
           })
         }
       }
-      EtcdRangeResponse::{ kvs, count: kvs.length().to_int64() }.encode()
+      EtcdRangeResponse::{ kvs, count: kvs.length().to_int64(), }.encode()
     } catch {
       _ => b""
     }
@@ -92,7 +92,7 @@ fn stateful_etcd_server() -> RpcServer {
       let g = EtcdLeaseGrantRequest::decode(req)
       let id = next_lease.val
       next_lease.val = next_lease.val + 1L
-      EtcdLeaseGrantResponse::{ id, ttl: g.ttl, error: "" }.encode()
+      EtcdLeaseGrantResponse::{ id, ttl: g.ttl, error: "", }.encode()
     } catch {
       _ => b""
     }

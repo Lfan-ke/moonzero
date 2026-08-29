@@ -22,7 +22,7 @@ pub struct ConsulResponse {
 ///|
 /// A consul response.
 pub fn ConsulResponse::new(status : Int, body : Bytes) -> ConsulResponse {
-  { status, body }
+  { status, body, }
 }
 
 ///|

@@ -82,7 +82,7 @@ pub fn EtcdKeyValue::decode(
       _ => r.skip(wire)
     }
   }
-  { key, create_revision, mod_revision, version, value, lease }
+  { key, create_revision, mod_revision, version, value, lease, }
 }
 
 ///|
@@ -128,7 +128,7 @@ pub fn EtcdRangeRequest::decode(
       _ => r.skip(wire)
     }
   }
-  { key, range_end, limit }
+  { key, range_end, limit, }
 }
 
 ///|
@@ -168,7 +168,7 @@ pub fn EtcdRangeResponse::decode(
       _ => r.skip(wire)
     }
   }
-  { kvs, count }
+  { kvs, count, }
 }
 
 ///|
@@ -213,7 +213,7 @@ pub fn EtcdPutRequest::decode(
       _ => r.skip(wire)
     }
   }
-  { key, value, lease }
+  { key, value, lease, }
 }
 
 ///|
@@ -254,7 +254,7 @@ pub fn EtcdLeaseGrantRequest::decode(
       _ => r.skip(wire)
     }
   }
-  { ttl, id }
+  { ttl, id, }
 }
 
 ///|
@@ -300,7 +300,7 @@ pub fn EtcdLeaseGrantResponse::decode(
       _ => r.skip(wire)
     }
   }
-  { id, ttl, error }
+  { id, ttl, error, }
 }
 
 ///|
@@ -378,7 +378,7 @@ pub fn EtcdLeaseKeepAliveResponse::decode(
       _ => r.skip(wire)
     }
   }
-  { id, ttl }
+  { id, ttl, }
 }
 
 ///|
@@ -442,7 +442,7 @@ pub fn EtcdEvent::decode(data : Bytes) -> EtcdEvent raise @moonrpc.PbError {
       _ => r.skip(wire)
     }
   }
-  { event_type, kv }
+  { event_type, kv, }
 }
 
 ///|
@@ -489,7 +489,7 @@ pub fn EtcdWatchCreateRequest::decode(
       _ => r.skip(wire)
     }
   }
-  { key, range_end, start_revision }
+  { key, range_end, start_revision, }
 }
 
 ///|
@@ -617,7 +617,7 @@ pub fn EtcdWatchResponse::decode(
       _ => r.skip(wire)
     }
   }
-  { watch_id, created, canceled, events }
+  { watch_id, created, canceled, events, }
 }
 
 ///|
@@ -664,7 +664,7 @@ pub fn EtcdDeleteRangeRequest::decode(
       _ => r.skip(wire)
     }
   }
-  { key, range_end, prev_kv }
+  { key, range_end, prev_kv, }
 }
 
 ///|
@@ -704,7 +704,7 @@ pub fn EtcdDeleteRangeResponse::decode(
       _ => r.skip(wire)
     }
   }
-  { deleted, prev_kvs }
+  { deleted, prev_kvs, }
 }
 
 ///|

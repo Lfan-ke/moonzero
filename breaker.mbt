@@ -163,7 +163,7 @@ pub fn breaker(b : Breaker, clock : Clock) -> Middleware {
       match scope {
         Http(_) =>
           if b.allow(clock.now()) {
-            let status : Ref[Int] = { val: 200 }
+            let status : Ref[Int] = { val: 200, }
             let observed : @moonasgi.Send = event => {
               match event {
                 HttpResponseStart(status=s, headers~, trailers~) => {
@@ -179,12 +179,8 @@ pub fn breaker(b : Breaker, clock : Clock) -> Middleware {
                 other => send(other)
               }
             }
-            inner(scope, receive, observed) catch {
-              err => {
-                b.record_failure(clock.now())
-                raise err
-              }
-            }
+            errdefer b.record_failure(clock.now())
+            inner(scope, receive, observed)
             if status.val >= 500 {
               b.record_failure(clock.now())
             } else {

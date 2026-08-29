@@ -75,7 +75,7 @@ fn service_conf_of_object(
     Some(_) => raise ConfigError("log_level must be a JSON string")
     None => def.log_level
   }
-  { name, host, port, timeout_ms, log_level }
+  { name, host, port, timeout_ms, log_level, }
 }
 
 ///|

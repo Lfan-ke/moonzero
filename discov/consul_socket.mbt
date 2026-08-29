@@ -18,7 +18,7 @@ pub struct ConsulSocket {
 ///|
 /// A transport to the consul agent at `host:port` (default port 8500).
 pub fn ConsulSocket::new(host : String, port? : Int = 8500) -> ConsulSocket {
-  { host, port }
+  { host, port, }
 }
 
 ///|
@@ -40,17 +40,11 @@ pub async fn ConsulSocket::request(
     body,
     content_type~,
   )
-  let response = try {
-    (tcp : &@io.Writer).write(request)
-    let raw = (tcp : &@io.Reader).read_all()
-    let parsed = @moonzero.http1_parse_response(raw.binary())
-    @moonzero.ConsulResponse::new(parsed.status(), parsed.body())
-  } catch {
-    e => {
-      tcp.close()
-      raise e
-    }
-  }
-  tcp.close()
-  response
+  // The socket has to close on every path, cancellation included — there is no fd
+  // finalizer to reclaim it otherwise.
+  defer tcp.close()
+  (tcp : &@io.Writer).write(request)
+  let raw = (tcp : &@io.Reader).read_all()
+  let parsed = @moonzero.http1_parse_response(raw.binary())
+  @moonzero.ConsulResponse::new(parsed.status(), parsed.body())
 }

@@ -20,7 +20,7 @@ pub fn RedisDiscovery::new(
   client : RedisClient,
   prefix? : String = "moonzero/",
 ) -> RedisDiscovery {
-  { client, prefix }
+  { client, prefix, }
 }
 
 ///|

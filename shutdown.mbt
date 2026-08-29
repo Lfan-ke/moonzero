@@ -19,7 +19,7 @@ pub struct ShutdownCoordinator {
 ///|
 /// A coordinator that is serving normally with no calls in flight.
 pub fn ShutdownCoordinator::new() -> ShutdownCoordinator {
-  { shutting_down: false, in_flight: 0 }
+  { shutting_down: false, in_flight: 0, }
 }
 
 ///|

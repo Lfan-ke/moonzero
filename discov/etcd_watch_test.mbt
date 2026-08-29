@@ -37,7 +37,7 @@ async test "etcd watch: reads created then a PUT event off a streamed Watch RPC"
     @async.sleep(300)
     let sock = EtcdSocket::connect("127.0.0.1", 18140)
     let responses = sock.watch(
-      { key: b"svc/", range_end: b"svc0", start_revision: 0L },
+      { key: b"svc/", range_end: b"svc0", start_revision: 0L, },
       2,
     )
     sock.close()

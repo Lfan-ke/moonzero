@@ -52,7 +52,7 @@ async fn main {
     "timeout within budget -> " +
     drive(@moonzero.timeout(1000L, clk0)(base()), []),
   )
-  let ticks : Ref[Int64] = { val: 0L }
+  let ticks : Ref[Int64] = { val: 0L, }
   let jump = @moonzero.Clock::new(() => {
     let v = ticks.val
     ticks.val = v + 1000L
@@ -93,7 +93,7 @@ async fn drive(
   let scope = @moonasgi.Scope::Http(
     @moonasgi.HttpScope::new(http_method="GET", path="/x", headers~),
   )
-  let sent : Ref[Bool] = { val: false }
+  let sent : Ref[Bool] = { val: false, }
   let receive : @moonasgi.Receive = () => {
     if sent.val {
       @moonasgi.Event::HttpDisconnect
@@ -102,7 +102,7 @@ async fn drive(
       @moonasgi.Event::HttpRequest(body=b"", more_body=false)
     }
   }
-  let status : Ref[Int] = { val: 0 }
+  let status : Ref[Int] = { val: 0, }
   let sink : @moonasgi.Send = event => {
     match event {
       HttpResponseStart(status=s, ..) => status.val = s

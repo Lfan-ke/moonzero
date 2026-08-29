@@ -24,7 +24,7 @@ pub fn TokenBucket::new(
 ) -> TokenBucket {
   let cap = if burst <= 0.0 { rate } else { burst }
   let cap = if cap <= 0.0 { 1.0 } else { cap }
-  { capacity: cap, refill_per_ms: rate / 1000.0, tokens: cap, last_ms: now }
+  { capacity: cap, refill_per_ms: rate / 1000.0, tokens: cap, last_ms: now, }
 }
 
 ///|

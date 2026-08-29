@@ -15,7 +15,7 @@ pub struct MaxConns {
 ///|
 /// A pool admitting at most `max` requests at once.
 pub fn MaxConns::new(max : Int) -> MaxConns {
-  { max, in_flight: 0 }
+  { max, in_flight: 0, }
 }
 
 ///|
@@ -53,8 +53,11 @@ pub fn max_conns(limit : MaxConns) -> Middleware {
       match scope {
         Http(_) =>
           if limit.try_acquire() {
+            // The permit has to come back on every path. As a trailing statement it
+            // was skipped whenever the inner app raised or was cancelled, and the
+            // limiter then wedged shut on 503 with permits it could never reclaim.
+            defer limit.release()
             inner(scope, receive, send)
-            limit.release()
           } else {
             for event in service_unavailable_events() {
               send(event)

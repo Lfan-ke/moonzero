@@ -13,7 +13,7 @@ async fn main {
   api.get("/boom", _ctx => raise Boom)
 
   // An incrementing clock so the access log shows a real elapsed duration.
-  let tick : Ref[Int64] = { val: 0L }
+  let tick : Ref[Int64] = { val: 0L, }
   let clock = @moonzero.Clock::new(() => {
     let now = tick.val
     tick.val = now + 5L
@@ -84,7 +84,7 @@ async fn drive(
   let scope = @moonasgi.Scope::Http(
     @moonasgi.HttpScope::new(http_method=verb, path~, headers~),
   )
-  let sent : Ref[Bool] = { val: false }
+  let sent : Ref[Bool] = { val: false, }
   let receive : @moonasgi.Receive = () => {
     if sent.val {
       @moonasgi.Event::HttpDisconnect
@@ -93,8 +93,8 @@ async fn drive(
       @moonasgi.Event::HttpRequest(body=b"", more_body=false)
     }
   }
-  let status : Ref[Int] = { val: 0 }
-  let out : Ref[Array[(String, String)]] = { val: [] }
+  let status : Ref[Int] = { val: 0, }
+  let out : Ref[Array[(String, String)]] = { val: [], }
   let body = Buffer()
   let sink : @moonasgi.Send = event => {
     match event {
@@ -122,7 +122,7 @@ fn hget(headers : Array[(String, String)], name : String) -> String {
 
 ///|
 fn text(b : Bytes) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i = 0; i < b.length(); i = i + 1 {
     sb.write_char(b[i].to_int().unsafe_to_char())
   }

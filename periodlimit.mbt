@@ -24,7 +24,7 @@ pub struct PeriodLimit {
 ///|
 /// A limiter admitting `quota` requests per `period_secs` seconds, per key.
 pub fn PeriodLimit::new(period_secs~ : Int, quota~ : Int) -> PeriodLimit {
-  { period_ms: period_secs.to_int64() * 1000L, quota, windows: Map([]) }
+  { period_ms: period_secs.to_int64() * 1000L, quota, windows: Map([]), }
 }
 
 ///|

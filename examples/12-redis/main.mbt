@@ -86,7 +86,7 @@ fn resp_show(v : @moonzero.RespValue) -> String {
 ///|
 /// Render a wire string with its CRLF framing visible.
 fn escape(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i = 0; i < s.length(); i = i + 1 {
     let c = s[i]
     if c == '\r' {
@@ -102,7 +102,7 @@ fn escape(s : String) -> String {
 
 ///|
 fn join(items : Array[String]) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_char('[')
   for i = 0; i < items.length(); i = i + 1 {
     if i > 0 {

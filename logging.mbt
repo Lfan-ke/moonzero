@@ -101,7 +101,7 @@ pub fn structured_logging(clock : Clock) -> Middleware {
           let ip = client_ip_of(scope)
           let ua = header_ci(scope, "user-agent", "-")
           let rid = header_ci(scope, "x-request-id", "-")
-          let logged : Ref[Bool] = { val: false }
+          let logged : Ref[Bool] = { val: false, }
           let observed : @moonasgi.Send = event => {
             match event {
               HttpResponseStart(status~, headers~, trailers~) => {

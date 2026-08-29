@@ -49,7 +49,7 @@ fn header_or(resp : @moonzero.Http1Response, name : String) -> String {
 ///|
 /// Render a wire string with its CRLF framing visible.
 fn escape(s : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i = 0; i < s.length(); i = i + 1 {
     let c = s[i]
     if c == '\r' {

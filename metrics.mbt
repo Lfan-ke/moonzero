@@ -10,7 +10,7 @@ pub struct CounterVec {
 ///|
 /// A fresh counter vector with no labels seen yet.
 pub fn CounterVec::new() -> CounterVec {
-  { counts: Map([]) }
+  { counts: Map([]), }
 }
 
 ///|
@@ -78,7 +78,7 @@ pub let default_latency_buckets : Array[Double] = [
 pub fn Histogram::new(
   bounds? : Array[Double] = default_latency_buckets,
 ) -> Histogram {
-  { bounds, bucket: Array::make(bounds.length(), 0L), sum: 0.0, count: 0 }
+  { bounds, bucket: Array::make(bounds.length(), 0L), sum: 0.0, count: 0, }
 }
 
 ///|
@@ -141,7 +141,7 @@ pub struct ServerMetrics {
 ///|
 /// Fresh server metrics: an empty counter and a default-bucket latency histogram.
 pub fn ServerMetrics::new() -> ServerMetrics {
-  { requests: CounterVec::new(), latency: Histogram::new() }
+  { requests: CounterVec::new(), latency: Histogram::new(), }
 }
 
 ///|
@@ -165,7 +165,7 @@ pub let exposition_content_type : String = "text/plain; version=0.0.4; charset=u
 /// Escape a label value for the text exposition format: backslash, double quote,
 /// and newline are backslash-escaped; every other byte passes through unchanged.
 fn escape_label(v : String) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i = 0; i < v.length(); i = i + 1 {
     let c = v[i]
     if c == '\\' {
@@ -188,7 +188,7 @@ fn labelset(pairs : Array[(String, String)]) -> String {
   if pairs.length() == 0 {
     return ""
   }
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_char('{')
   for i = 0; i < pairs.length(); i = i + 1 {
     if i > 0 {
@@ -214,7 +214,7 @@ pub fn CounterVec::to_exposition(
   help~ : String,
   label? : String = "label",
 ) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("# HELP " + name + " " + help + "\n")
   sb.write_string("# TYPE " + name + " counter\n")
   let keys = self.labels()
@@ -237,7 +237,7 @@ pub fn Histogram::to_exposition(
   name~ : String,
   help~ : String,
 ) -> String {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_string("# HELP " + name + " " + help + "\n")
   sb.write_string("# TYPE " + name + " histogram\n")
   for i = 0; i < self.bounds.length(); i = i + 1 {
@@ -316,7 +316,7 @@ pub fn metrics(m : ServerMetrics, clock : Clock) -> Middleware {
           let start = clock.now()
           let verb = hs.http_method
           let path = hs.path
-          let recorded : Ref[Bool] = { val: false }
+          let recorded : Ref[Bool] = { val: false, }
           let observed : @moonasgi.Send = event => {
             match event {
               HttpResponseStart(status~, headers~, trailers~) => {

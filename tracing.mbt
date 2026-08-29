@@ -15,7 +15,7 @@ fn splitmix64(x : UInt64) -> UInt64 {
 /// The 16 lowercase hex digits of a 64-bit value, most-significant nibble first.
 fn hex16(v : UInt64) -> String {
   let digits = "0123456789abcdef"
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i = 15; i >= 0; i = i - 1 {
     let nibble = ((v >> (i * 4)) & 0xFUL).to_int()
     sb.write_char(digits[nibble].to_int().unsafe_to_char())
@@ -71,7 +71,7 @@ fn two_hex(n : Int) -> String {
   let digits = "0123456789abcdef"
   let hi = digits[(n >> 4) & 0xF].to_int().unsafe_to_char()
   let lo = digits[n & 0xF].to_int().unsafe_to_char()
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   sb.write_char(hi)
   sb.write_char(lo)
   sb.to_string()
@@ -110,7 +110,7 @@ pub fn parse_traceparent(value : String) -> TraceContext? {
   if !is_hex(parts[3], 2) {
     return None
   }
-  Some({ trace_id: parts[1], span_id: parts[2], flags: hex_byte(parts[3]) })
+  Some({ trace_id: parts[1], span_id: parts[2], flags: hex_byte(parts[3]), })
 }
 
 ///|
@@ -147,10 +147,10 @@ pub fn next_trace_context(inbound : String?, seed : Int64) -> TraceContext {
   match inbound {
     Some(v) =>
       match parse_traceparent(v) {
-        Some(parent) => { trace_id: parent.trace_id, span_id: span, flags: 1 }
-        None => { trace_id: generate_trace_id(seed), span_id: span, flags: 1 }
+        Some(parent) => { trace_id: parent.trace_id, span_id: span, flags: 1, }
+        None => { trace_id: generate_trace_id(seed), span_id: span, flags: 1, }
       }
-    None => { trace_id: generate_trace_id(seed), span_id: span, flags: 1 }
+    None => { trace_id: generate_trace_id(seed), span_id: span, flags: 1, }
   }
 }
 
@@ -162,7 +162,7 @@ pub fn next_trace_context(inbound : String?, seed : Int64) -> TraceContext {
 /// span ids distinct across the requests this layer serves. Non-HTTP scopes pass
 /// through untraced.
 pub fn tracing(header? : String = "x-trace-id") -> Middleware {
-  let counter : Ref[Int64] = { val: 0L }
+  let counter : Ref[Int64] = { val: 0L, }
   inner => {
     (scope, receive, send) => {
       match scope {

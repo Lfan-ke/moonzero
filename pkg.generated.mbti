@@ -1,0 +1,743 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "Lfan-ke/moonzero"
+
+import {
+  "Lfan-ke/moonapi",
+  "Lfan-ke/moonasgi",
+  "Lfan-ke/moonrpc",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn auth(String, Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub fn base64url_decode(String) -> Bytes
+
+pub fn base64url_encode(Bytes) -> String
+
+pub fn breaker(Breaker, Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub fn constant_time_eq(Bytes, Bytes) -> Bool
+
+pub fn consul_check_id(String) -> String
+
+pub fn consul_parse_health(Bytes) -> Array[Endpoint] raise ConsulError
+
+pub fn consul_register_body(String, String, String, Int, Int) -> Bytes
+
+pub fn cors(CorsConf) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub let default_latency_buckets : Array[Double]
+
+pub fn etcd_prefix_end(Bytes) -> Bytes
+
+pub fn etcd_service_prefix(String, String) -> String
+
+pub let exposition_content_type : String
+
+pub fn generate_span_id(Int64) -> String
+
+pub fn generate_trace_id(Int64) -> String
+
+pub fn hmac_sha256(Bytes, Bytes) -> Bytes
+
+pub fn http1_parse_response(Bytes) -> Http1Response raise Http1Error
+
+pub fn http1_request(String, String, String, Bytes, content_type? : String) -> Bytes
+
+pub fn jwt_authorized(String?, String, Int64) -> Bool
+
+pub fn jwt_sign(Map[String, Json], String) -> String
+
+pub fn jwt_verify(String, String, Int64) -> Map[String, Json] raise JwtError
+
+pub fn logging(async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub fn max_conns(MaxConns) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub fn maxbytes(Int) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub fn metrics(ServerMetrics, Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub fn metrics_handler(ServerMetrics) -> (@moonapi.Context) -> @moonasgi.Response raise
+
+pub fn mount_metrics(@moonapi.App, ServerMetrics) -> Unit
+
+pub fn next_trace_context(String?, Int64) -> TraceContext
+
+pub fn parse_traceparent(String) -> TraceContext?
+
+pub fn period_limit(PeriodLimit, Clock, key? : String) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub fn pick_first(Array[Endpoint]) -> Endpoint?
+
+pub fn rate_limit(TokenBucket, Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub fn recovery(async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub fn redis_instance_key(String, String, Endpoint) -> String
+
+pub fn redis_service_pattern(String, String) -> String
+
+pub fn redis_service_prefix(String, String) -> String
+
+pub fn request_id(header? : String) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub fn resolve_one(InMemoryRegistry, String, RoundRobin) -> Endpoint?
+
+pub fn resp_command(Array[String]) -> Bytes
+
+pub fn resp_encode_command(Array[Bytes]) -> Bytes
+
+pub fn resp_kind(RespValue) -> String
+
+pub fn sha256(Bytes) -> Bytes
+
+pub fn status_of_code(Int) -> @moonrpc.Status
+
+pub fn structured_logging(Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub fn timeout(Int64, Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub fn tracing(header? : String) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub fn yaml_parse(String) -> Json raise ConfigError
+
+// Errors
+pub suberror ConfigError {
+  ConfigError(String)
+}
+
+pub suberror ConsulError {
+  ConsulError(String)
+}
+
+pub suberror EtcdError {
+  EtcdError(String)
+}
+
+pub suberror Http1Error {
+  Http1Error(String)
+}
+
+pub suberror JwtError {
+  MalformedToken(String)
+  UnsupportedAlg(String)
+  BadSignature
+  Expired
+  NotYetValid
+}
+
+pub suberror RedisError {
+  RedisError(String)
+}
+
+pub suberror RespError {
+  RespError(String)
+}
+
+// Types and methods
+pub(all) enum Balancer {
+  RoundRobinBalancer(RoundRobin)
+  PickFirst
+}
+pub fn Balancer::pick(Self, Array[Endpoint]) -> Endpoint?
+pub fn Balancer::round_robin() -> Self
+
+pub struct BidiCall {
+  channel : RpcChannel
+  sid : Int
+  mut pending : Bytes
+  mut status_code : Int
+  mut ended : Bool
+}
+pub fn BidiCall::close_send(Self) -> Result[Array[Bytes], @moonrpc.Status] raise
+pub fn BidiCall::send(Self, Bytes) -> Array[Bytes] raise
+
+pub(all) struct BidiStreamHandler {
+  on_message : (Bytes) -> Array[Bytes]
+  on_end : () -> Array[Bytes]
+}
+
+pub struct Breaker {
+  max_failures : Int
+  open_ms : Int64
+  half_open_max : Int
+  mut state : BreakerState
+  mut failures : Int
+  mut opened_at : Int64
+  mut probes : Int
+}
+pub fn Breaker::allow(Self, Int64) -> Bool
+pub fn Breaker::new(max_failures? : Int, open_ms? : Int64, half_open_max? : Int) -> Self
+pub fn Breaker::record_failure(Self, Int64) -> Unit
+pub fn Breaker::record_success(Self) -> Unit
+pub fn Breaker::state(Self) -> BreakerState
+
+pub(all) enum BreakerState {
+  Closed
+  Open
+  HalfOpen
+} derive(Eq)
+pub fn BreakerState::to_string(Self) -> String
+
+pub struct Clock {
+  now_ms : () -> Int64
+}
+pub fn Clock::new(() -> Int64) -> Self
+pub fn Clock::now(Self) -> Int64
+
+pub struct ConsulClient {
+  http : &ConsulHttp
+}
+pub fn ConsulClient::agent_services(Self) -> Array[(String, String)] raise ConsulError
+pub fn ConsulClient::check_pass(Self, String) -> Unit raise ConsulError
+pub fn ConsulClient::deregister_service(Self, String) -> Unit raise ConsulError
+pub fn ConsulClient::health_service(Self, String) -> Array[Endpoint] raise ConsulError
+pub fn ConsulClient::new(&ConsulHttp) -> Self
+pub fn ConsulClient::register_service(Self, String, String, String, Int, Int) -> Unit raise ConsulError
+
+pub struct ConsulDiscovery {
+  client : ConsulClient
+}
+pub fn ConsulDiscovery::deregister(Self, String) -> Unit raise
+pub fn ConsulDiscovery::deregister_instance(Self, String, Endpoint) -> Unit raise
+pub fn ConsulDiscovery::keepalive(Self, String, Endpoint) -> Unit raise
+pub fn ConsulDiscovery::new(ConsulClient) -> Self
+pub fn ConsulDiscovery::register(Self, String, Endpoint, ttl? : Int) -> String raise
+pub fn ConsulDiscovery::resolve(Self, String) -> Array[Endpoint] raise
+pub fn ConsulDiscovery::resolver(Self) -> (String) -> Array[Endpoint]
+
+pub struct ConsulResponse {
+  status : Int
+  body : Bytes
+}
+pub fn ConsulResponse::body(Self) -> Bytes
+pub fn ConsulResponse::new(Int, Bytes) -> Self
+pub fn ConsulResponse::status(Self) -> Int
+
+pub(all) struct CorsConf {
+  allow_origin : String
+  allow_methods : String
+  allow_headers : String
+  allow_credentials : Bool
+  max_age : Int
+}
+pub fn CorsConf::new(allow_origin? : String, allow_methods? : String, allow_headers? : String, allow_credentials? : Bool, max_age? : Int) -> Self
+
+pub struct CounterVec {
+  counts : Map[String, Int64]
+}
+pub fn CounterVec::add(Self, String, Int64) -> Unit
+pub fn CounterVec::inc(Self, String) -> Unit
+pub fn CounterVec::labels(Self) -> Array[String]
+pub fn CounterVec::new() -> Self
+pub fn CounterVec::to_exposition(Self, name~ : String, help~ : String, label? : String) -> String
+pub fn CounterVec::total(Self) -> Int64
+pub fn CounterVec::value(Self, String) -> Int64
+
+pub struct Deadline {
+  budget_ms : Int64
+  started_ms : Int64
+}
+pub fn Deadline::expired(Self, Int64) -> Bool
+pub fn Deadline::remaining(Self, Int64) -> Int64
+pub fn Deadline::start(Int64, Int64) -> Self
+
+pub(all) struct Endpoint {
+  host : String
+  port : Int
+  weight : Int
+} derive(Eq, @debug.Debug)
+pub fn Endpoint::address(Self) -> String
+pub fn Endpoint::new(String, Int, weight? : Int) -> Self
+
+pub struct EtcdClient {
+  channel : RpcChannel
+}
+pub fn EtcdClient::delete_range(Self, EtcdDeleteRangeRequest) -> EtcdDeleteRangeResponse raise
+pub fn EtcdClient::lease_grant(Self, EtcdLeaseGrantRequest) -> EtcdLeaseGrantResponse raise
+pub fn EtcdClient::new(RpcChannel) -> Self
+pub fn EtcdClient::put(Self, EtcdPutRequest) -> EtcdPutResponse raise
+pub fn EtcdClient::range(Self, EtcdRangeRequest) -> EtcdRangeResponse raise
+pub fn EtcdClient::watch(Self, EtcdWatchRequest) -> Array[EtcdWatchResponse] raise
+
+pub(all) struct EtcdDeleteRangeRequest {
+  key : Bytes
+  range_end : Bytes
+  prev_kv : Bool
+} derive(Eq)
+pub fn EtcdDeleteRangeRequest::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdDeleteRangeRequest::encode(Self) -> Bytes
+
+pub(all) struct EtcdDeleteRangeResponse {
+  deleted : Int64
+  prev_kvs : Array[EtcdKeyValue]
+} derive(Eq)
+pub fn EtcdDeleteRangeResponse::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdDeleteRangeResponse::encode(Self) -> Bytes
+
+pub struct EtcdDiscovery {
+  client : EtcdClient
+  prefix : String
+}
+pub fn EtcdDiscovery::deregister(Self, String) -> Unit raise
+pub fn EtcdDiscovery::new(EtcdClient, prefix? : String) -> Self
+pub fn EtcdDiscovery::register(Self, String, Endpoint, ttl? : Int64) -> Int64 raise
+pub fn EtcdDiscovery::resolve(Self, String) -> Array[Endpoint] raise
+pub fn EtcdDiscovery::resolver(Self) -> (String) -> Array[Endpoint]
+
+pub(all) struct EtcdEvent {
+  event_type : EtcdEventType
+  kv : EtcdKeyValue
+} derive(Eq)
+pub fn EtcdEvent::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdEvent::encode(Self) -> Bytes
+
+pub(all) enum EtcdEventType {
+  Put
+  Delete
+} derive(Eq)
+pub fn EtcdEventType::from_int(Int) -> Self
+pub fn EtcdEventType::to_int(Self) -> Int
+
+pub(all) struct EtcdKeyValue {
+  key : Bytes
+  create_revision : Int64
+  mod_revision : Int64
+  version : Int64
+  value : Bytes
+  lease : Int64
+} derive(Eq)
+pub fn EtcdKeyValue::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdKeyValue::empty() -> Self
+pub fn EtcdKeyValue::encode(Self) -> Bytes
+
+pub(all) struct EtcdLeaseGrantRequest {
+  ttl : Int64
+  id : Int64
+} derive(Eq)
+pub fn EtcdLeaseGrantRequest::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdLeaseGrantRequest::encode(Self) -> Bytes
+
+pub(all) struct EtcdLeaseGrantResponse {
+  id : Int64
+  ttl : Int64
+  error : String
+} derive(Eq)
+pub fn EtcdLeaseGrantResponse::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdLeaseGrantResponse::encode(Self) -> Bytes
+
+pub(all) struct EtcdLeaseKeepAliveRequest {
+  id : Int64
+} derive(Eq)
+pub fn EtcdLeaseKeepAliveRequest::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdLeaseKeepAliveRequest::encode(Self) -> Bytes
+
+pub(all) struct EtcdLeaseKeepAliveResponse {
+  id : Int64
+  ttl : Int64
+} derive(Eq)
+pub fn EtcdLeaseKeepAliveResponse::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdLeaseKeepAliveResponse::encode(Self) -> Bytes
+
+pub(all) struct EtcdPutRequest {
+  key : Bytes
+  value : Bytes
+  lease : Int64
+} derive(Eq)
+pub fn EtcdPutRequest::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdPutRequest::encode(Self) -> Bytes
+
+pub(all) struct EtcdPutResponse {
+  prev_kv : EtcdKeyValue
+} derive(Eq)
+pub fn EtcdPutResponse::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdPutResponse::encode(Self) -> Bytes
+
+pub(all) struct EtcdRangeRequest {
+  key : Bytes
+  range_end : Bytes
+  limit : Int64
+} derive(Eq)
+pub fn EtcdRangeRequest::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdRangeRequest::encode(Self) -> Bytes
+
+pub(all) struct EtcdRangeResponse {
+  kvs : Array[EtcdKeyValue]
+  count : Int64
+} derive(Eq)
+pub fn EtcdRangeResponse::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdRangeResponse::encode(Self) -> Bytes
+
+pub(all) struct EtcdWatchCancelRequest {
+  watch_id : Int64
+} derive(Eq)
+pub fn EtcdWatchCancelRequest::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdWatchCancelRequest::encode(Self) -> Bytes
+
+pub(all) struct EtcdWatchCreateRequest {
+  key : Bytes
+  range_end : Bytes
+  start_revision : Int64
+} derive(Eq)
+pub fn EtcdWatchCreateRequest::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdWatchCreateRequest::encode(Self) -> Bytes
+
+pub(all) enum EtcdWatchRequest {
+  Create(EtcdWatchCreateRequest)
+  Cancel(EtcdWatchCancelRequest)
+} derive(Eq)
+pub fn EtcdWatchRequest::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdWatchRequest::encode(Self) -> Bytes
+
+pub(all) struct EtcdWatchResponse {
+  watch_id : Int64
+  created : Bool
+  canceled : Bool
+  events : Array[EtcdEvent]
+} derive(Eq)
+pub fn EtcdWatchResponse::decode(Bytes) -> Self raise @moonrpc.PbError
+pub fn EtcdWatchResponse::encode(Self) -> Bytes
+
+pub struct Group {
+  app : @moonapi.App
+  prefix : String
+}
+pub fn Group::delete(Self, String, (@moonapi.Context) -> @moonasgi.Response raise, summary? : String) -> Unit
+pub fn Group::get(Self, String, (@moonapi.Context) -> @moonasgi.Response raise, summary? : String) -> Unit
+pub fn Group::new(@moonapi.App, String) -> Self
+pub fn Group::patch(Self, String, (@moonapi.Context) -> @moonasgi.Response raise, summary? : String) -> Unit
+pub fn Group::post(Self, String, (@moonapi.Context) -> @moonasgi.Response raise, summary? : String) -> Unit
+pub fn Group::prefix(Self) -> String
+pub fn Group::put(Self, String, (@moonapi.Context) -> @moonasgi.Response raise, summary? : String) -> Unit
+pub fn Group::route(Self, @moonapi.Method, String, (@moonapi.Context) -> @moonasgi.Response raise, summary? : String) -> Unit
+
+pub struct Histogram {
+  bounds : Array[Double]
+  bucket : Array[Int64]
+  mut sum : Double
+  mut count : Int64
+}
+pub fn Histogram::bounds(Self) -> Array[Double]
+pub fn Histogram::bucket_count(Self, Int) -> Int64
+pub fn Histogram::mean(Self) -> Double
+pub fn Histogram::new(bounds? : Array[Double]) -> Self
+pub fn Histogram::observe(Self, Double) -> Unit
+pub fn Histogram::sum_value(Self) -> Double
+pub fn Histogram::to_exposition(Self, name~ : String, help~ : String) -> String
+pub fn Histogram::total(Self) -> Int64
+
+pub struct Http1Response {
+  status : Int
+  headers : Array[(String, String)]
+  body : Bytes
+}
+pub fn Http1Response::body(Self) -> Bytes
+pub fn Http1Response::header(Self, String) -> String?
+pub fn Http1Response::status(Self) -> Int
+
+pub struct InMemoryRegistry {
+  instances : Map[String, Map[String, Endpoint]]
+  mut seq : Int
+  mut revision : Int64
+}
+pub fn InMemoryRegistry::deregister(Self, String, String) -> Bool
+pub fn InMemoryRegistry::new() -> Self
+pub fn InMemoryRegistry::register(Self, String, Endpoint) -> String
+pub fn InMemoryRegistry::resolve(Self, String) -> Array[Endpoint]
+pub fn InMemoryRegistry::resolver(Self) -> (String) -> Array[Endpoint]
+pub fn InMemoryRegistry::revision(Self) -> Int64
+pub fn InMemoryRegistry::services(Self) -> Array[String]
+
+pub struct LoadBalancedChannel {
+  resolve : (String) -> Array[Endpoint]
+  cluster : RpcCluster
+  balancer : Balancer
+  service : String
+}
+pub fn LoadBalancedChannel::call(Self, String, Bytes) -> Result[Bytes, @moonrpc.Status] raise
+pub fn LoadBalancedChannel::call_bidi_streaming(Self, String, Array[Bytes]) -> Result[Array[Bytes], @moonrpc.Status] raise
+pub fn LoadBalancedChannel::call_server_streaming(Self, String, Bytes) -> Result[Array[Bytes], @moonrpc.Status] raise
+pub fn LoadBalancedChannel::new((String) -> Array[Endpoint], RpcCluster, String, balancer? : Balancer) -> Self
+
+pub(all) enum LogLevel {
+  Debug
+  Info
+  Error
+  Severe
+} derive(Compare, Eq, @debug.Debug)
+pub fn LogLevel::parse(String) -> Self
+pub fn LogLevel::to_string(Self) -> String
+pub impl @json.FromJson for LogLevel
+
+pub struct ManualClock {
+  mut ms : Int64
+}
+pub fn ManualClock::advance(Self, Int64) -> Unit
+pub fn ManualClock::as_clock(Self) -> Clock
+pub fn ManualClock::new(start? : Int64) -> Self
+
+pub struct MaxConns {
+  max : Int
+  mut in_flight : Int
+}
+pub fn MaxConns::in_flight(Self) -> Int
+pub fn MaxConns::new(Int) -> Self
+pub fn MaxConns::release(Self) -> Unit
+pub fn MaxConns::try_acquire(Self) -> Bool
+
+pub struct PeriodLimit {
+  period_ms : Int64
+  quota : Int
+  windows : Map[String, (Int64, Int)]
+}
+pub fn PeriodLimit::new(period_secs~ : Int, quota~ : Int) -> Self
+pub fn PeriodLimit::take(Self, String, Int64) -> PeriodResult
+
+pub(all) enum PeriodResult {
+  PeriodAllowed
+  PeriodHitQuota
+  PeriodOverQuota
+} derive(Eq, @debug.Debug)
+
+pub struct PersistentRegistry {
+  instances : Map[String, Map[String, Endpoint]]
+  key_rev : Map[String, Int64]
+  mut seq : Int
+  mut revision : Int64
+  events : Array[RegistryEvent]
+  watchers : Array[(RegistryEvent) -> Unit]
+}
+pub fn PersistentRegistry::deregister(Self, String, String) -> Bool
+pub fn PersistentRegistry::events_since(Self, Int64) -> Array[RegistryEvent]
+pub fn PersistentRegistry::keyed_entries(Self) -> Array[(String, Endpoint, Int64)]
+pub fn PersistentRegistry::new() -> Self
+pub fn PersistentRegistry::register(Self, String, Endpoint) -> String
+pub fn PersistentRegistry::resolve(Self, String) -> Array[Endpoint]
+pub fn PersistentRegistry::resolver(Self) -> (String) -> Array[Endpoint]
+pub fn PersistentRegistry::restore(String) -> Self raise ConfigError
+pub fn PersistentRegistry::revision(Self) -> Int64
+pub fn PersistentRegistry::services(Self) -> Array[String]
+pub fn PersistentRegistry::snapshot(Self) -> String
+pub fn PersistentRegistry::watch(Self, (RegistryEvent) -> Unit) -> Unit
+
+pub struct RedisClient {
+  conn : &RedisConn
+}
+pub fn RedisClient::command(Self, Array[Bytes]) -> RespValue raise RedisError
+pub fn RedisClient::del(Self, Array[Bytes]) -> Int64 raise RedisError
+pub fn RedisClient::expire(Self, Bytes, Int) -> Bool raise RedisError
+pub fn RedisClient::get(Self, Bytes) -> Bytes? raise RedisError
+pub fn RedisClient::new(&RedisConn) -> Self
+pub fn RedisClient::ping(Self) -> String raise RedisError
+pub fn RedisClient::scan_match(Self, Bytes, Int) -> Array[Bytes] raise RedisError
+pub fn RedisClient::set_ex(Self, Bytes, Bytes, Int) -> Unit raise RedisError
+
+pub struct RedisDiscovery {
+  client : RedisClient
+  prefix : String
+}
+pub fn RedisDiscovery::deregister(Self, String) -> Unit raise
+pub fn RedisDiscovery::deregister_instance(Self, String, Endpoint) -> Unit raise
+pub fn RedisDiscovery::keepalive(Self, String, Endpoint, ttl? : Int) -> Bool raise
+pub fn RedisDiscovery::new(RedisClient, prefix? : String) -> Self
+pub fn RedisDiscovery::register(Self, String, Endpoint, ttl? : Int) -> String raise
+pub fn RedisDiscovery::resolve(Self, String) -> Array[Endpoint] raise
+pub fn RedisDiscovery::resolver(Self) -> (String) -> Array[Endpoint]
+
+pub(all) enum RegistryEvent {
+  Put(key~ : String, endpoint~ : Endpoint, revision~ : Int64)
+  Delete(key~ : String, revision~ : Int64)
+} derive(Eq, @debug.Debug)
+pub fn RegistryEvent::revision(Self) -> Int64
+
+pub(all) struct RequestLog {
+  http_method : String
+  path : String
+  status : Int
+  duration_ms : Int64
+  request_id : String
+  client_ip : String
+  user_agent : String
+}
+pub fn RequestLog::render(Self) -> String
+pub fn RequestLog::to_json(Self) -> Json
+
+pub struct RespReader {
+  data : Bytes
+  mut pos : Int
+}
+pub fn RespReader::at_end(Self) -> Bool
+pub fn RespReader::new(Bytes) -> Self
+pub fn RespReader::read(Self) -> RespValue raise RespError
+
+pub(all) enum RespValue {
+  SimpleString(String)
+  Error(String)
+  Integer(Int64)
+  BulkString(Bytes)
+  Null
+  Array(Array[RespValue])
+  Boolean(Bool)
+  Double(Double)
+  BigNumber(String)
+  BulkError(String)
+  VerbatimString(String, Bytes)
+  RespMap(Array[(RespValue, RespValue)])
+  RespSet(Array[RespValue])
+  Push(Array[RespValue])
+} derive(Eq, @debug.Debug)
+pub fn RespValue::decode(Bytes) -> Self raise RespError
+
+pub struct RoundRobin {
+  mut cursor : Int
+}
+pub fn RoundRobin::new() -> Self
+pub fn RoundRobin::pick(Self, Array[Endpoint]) -> Endpoint?
+
+pub struct RpcChannel {
+  engine : @moonrpc.H2Server
+  encoder : @moonrpc.HpackEncoder
+  decoder : @moonrpc.HpackDecoder
+  authority : String
+  mut next_stream_id : Int
+}
+pub fn RpcChannel::call(Self, String, Bytes) -> Result[Bytes, @moonrpc.Status] raise
+pub fn RpcChannel::call_bidi_streaming(Self, String, Array[Bytes]) -> Result[Array[Bytes], @moonrpc.Status] raise
+pub fn RpcChannel::call_client_streaming(Self, String, Array[Bytes]) -> Result[Bytes, @moonrpc.Status] raise
+pub fn RpcChannel::call_server_streaming(Self, String, Bytes) -> Result[Array[Bytes], @moonrpc.Status] raise
+pub fn RpcChannel::connect(RpcServer, authority? : String) -> Self raise
+pub fn RpcChannel::open_bidi(Self, String) -> BidiCall raise
+
+pub struct RpcCluster {
+  servers : Map[String, RpcServer]
+}
+pub fn RpcCluster::add(Self, Endpoint, RpcServer) -> Unit
+pub fn RpcCluster::dial(Self, Endpoint) -> RpcChannel? raise
+pub fn RpcCluster::new() -> Self
+
+pub struct RpcGroup {
+  server : RpcServer
+  service : String
+}
+pub fn RpcGroup::register(Self, String, (Bytes) -> Bytes) -> Unit
+pub fn RpcGroup::register_bidi_streaming(Self, String, () -> BidiStreamHandler) -> Unit
+pub fn RpcGroup::register_client_streaming(Self, String, (Array[Bytes]) -> Bytes) -> Unit
+pub fn RpcGroup::register_server_streaming(Self, String, (Bytes) -> Array[Bytes]) -> Unit
+pub fn RpcGroup::service(Self) -> String
+
+pub struct RpcServer {
+  conf : RpcServerConf
+  handlers : Map[String, (Bytes) -> Bytes]
+  server_streaming : Map[String, (Bytes) -> Array[Bytes]]
+  client_streaming : Map[String, (Array[Bytes]) -> Bytes]
+  bidi_streaming : Map[String, () -> BidiStreamHandler]
+}
+pub fn RpcServer::conf(Self) -> RpcServerConf
+pub fn RpcServer::dispatch(Self, String, Bytes) -> Result[Bytes, @moonrpc.Status]
+pub fn RpcServer::dispatch_graceful(Self, ShutdownCoordinator, String, Bytes) -> Result[Bytes, @moonrpc.Status]
+pub fn RpcServer::group(Self, String) -> RpcGroup
+pub fn RpcServer::has_method(Self, String) -> Bool
+pub fn RpcServer::lookup(Self, String) -> ((Bytes) -> Bytes)?
+pub fn RpcServer::methods(Self) -> Array[String]
+pub fn RpcServer::new(RpcServerConf) -> Self
+pub fn RpcServer::register(Self, @moonrpc.Method, (Bytes) -> Bytes) -> Unit
+pub fn RpcServer::register_bidi_streaming(Self, @moonrpc.Method, () -> BidiStreamHandler) -> Unit
+pub fn RpcServer::register_client_streaming(Self, @moonrpc.Method, (Array[Bytes]) -> Bytes) -> Unit
+pub fn RpcServer::register_server_streaming(Self, @moonrpc.Method, (Bytes) -> Array[Bytes]) -> Unit
+pub fn RpcServer::to_h2(Self) -> @moonrpc.H2Server
+
+pub(all) struct RpcServerConf {
+  name : String
+  host : String
+  port : Int
+  timeout_ms : Int
+} derive(Eq, @debug.Debug, @json.FromJson)
+pub fn RpcServerConf::from_json(String) -> Self raise ConfigError
+pub fn RpcServerConf::from_yaml(String) -> Self raise ConfigError
+pub fn RpcServerConf::new(name? : String, host? : String, port? : Int, timeout_ms? : Int) -> Self
+
+pub struct Server {
+  conf : ServiceConf
+  handler : async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+}
+pub fn Server::describe(Self) -> String
+pub fn Server::new(ServiceConf, @moonapi.App) -> Self
+pub fn Server::to_asgi(Self) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub fn Server::use_(Self, (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> Self
+
+pub struct ServerMetrics {
+  requests : CounterVec
+  latency : Histogram
+}
+pub fn ServerMetrics::latency(Self) -> Histogram
+pub fn ServerMetrics::new() -> Self
+pub fn ServerMetrics::requests(Self) -> CounterVec
+pub fn ServerMetrics::to_exposition(Self) -> String
+
+pub(all) struct ServiceConf {
+  name : String
+  host : String
+  port : Int
+  timeout_ms : Int
+  log_level : LogLevel
+} derive(Eq, @json.FromJson)
+pub fn ServiceConf::from_json(String) -> Self raise ConfigError
+pub fn ServiceConf::from_yaml(String) -> Self raise ConfigError
+pub fn ServiceConf::new(name? : String, host? : String, port? : Int, timeout_ms? : Int, log_level? : LogLevel) -> Self
+
+pub struct ShutdownCoordinator {
+  mut shutting_down : Bool
+  mut in_flight : Int
+}
+pub fn ShutdownCoordinator::begin_call(Self) -> Bool
+pub fn ShutdownCoordinator::end_call(Self) -> Unit
+pub fn ShutdownCoordinator::in_flight(Self) -> Int
+pub fn ShutdownCoordinator::initiate_shutdown(Self) -> Unit
+pub fn ShutdownCoordinator::is_drained(Self) -> Bool
+pub fn ShutdownCoordinator::is_shutting_down(Self) -> Bool
+pub fn ShutdownCoordinator::new() -> Self
+
+pub struct TokenBucket {
+  capacity : Double
+  refill_per_ms : Double
+  mut tokens : Double
+  mut last_ms : Int64
+}
+pub fn TokenBucket::allow(Self, Int64) -> Bool
+pub fn TokenBucket::allow_n(Self, Double, Int64) -> Bool
+pub fn TokenBucket::available(Self, Int64) -> Double
+pub fn TokenBucket::new(Double, burst? : Double, now? : Int64) -> Self
+
+pub(all) struct TraceContext {
+  trace_id : String
+  span_id : String
+  flags : Int
+}
+pub fn TraceContext::span_id(Self) -> String
+pub fn TraceContext::to_traceparent(Self) -> String
+pub fn TraceContext::trace_id(Self) -> String
+
+// Type aliases
+pub type BidiStreamFactory = () -> BidiStreamHandler
+
+pub type ClientStreamHandler = (Array[Bytes]) -> Bytes
+
+pub type Middleware = (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub type Resolve = (String) -> Array[Endpoint]
+
+pub type RpcHandler = (Bytes) -> Bytes
+
+pub type ServerStreamHandler = (Bytes) -> Array[Bytes]
+
+// Traits
+pub trait ConsulHttp {
+  fn request(Self, String, String, Bytes) -> ConsulResponse raise
+}
+
+pub trait RedisConn {
+  fn execute(Self, Array[Bytes]) -> RespValue raise
+}

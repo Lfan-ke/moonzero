@@ -110,7 +110,7 @@ fn count_dots(s : String) -> Int {
 ///|
 fn to_hex(b : Bytes) -> String {
   let digits = "0123456789abcdef"
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i = 0; i < b.length(); i = i + 1 {
     let v = b[i].to_int()
     sb.write_char(digits[(v >> 4) & 0xF].to_int().unsafe_to_char())

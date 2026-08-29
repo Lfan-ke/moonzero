@@ -86,7 +86,7 @@ pub fn RpcServer::to_h2(self : RpcServer) -> @moonrpc.H2Server {
   for path, factory in self.bidi_streaming {
     engine.register_bidi(path, _ctx => {
       let h = factory()
-      { on_message: h.on_message, on_end: h.on_end }
+      { on_message: h.on_message, on_end: h.on_end, }
     })
   }
   engine
@@ -238,7 +238,13 @@ pub fn RpcChannel::open_bidi(
   path : String,
 ) -> BidiCall raise {
   let (sid, frames) = self.open(path)
-  let call = { channel: self, sid, pending: b"", status_code: -1, ended: false }
+  let call = {
+    channel: self,
+    sid,
+    pending: b"",
+    status_code: -1,
+    ended: false,
+  }
   let _ = call.absorb(frames)
   call
 }
@@ -373,12 +379,12 @@ fn RpcChannel::open(
   let sid = self.next_stream_id
   self.next_stream_id = self.next_stream_id + 2
   let block = self.encoder.encode([
-    { name: b":method", value: b"POST" },
-    { name: b":scheme", value: b"http" },
-    { name: b":path", value: ascii_bytes(path) },
-    { name: b":authority", value: ascii_bytes(self.authority) },
-    { name: b"content-type", value: b"application/grpc" },
-    { name: b"te", value: b"trailers" },
+    { name: b":method", value: b"POST", },
+    { name: b":scheme", value: b"http", },
+    { name: b":path", value: ascii_bytes(path), },
+    { name: b":authority", value: ascii_bytes(self.authority), },
+    { name: b"content-type", value: b"application/grpc", },
+    { name: b"te", value: b"trailers", },
   ])
   let frames = self.engine.feed(
     Headers(

@@ -1,7 +1,7 @@
 ///|
 test "rpc server registers and dispatches a method by gRPC path" {
   let server = RpcServer::new(RpcServerConf::new(name="greeter", port=9090))
-  let desc : @moonrpc.Method = { service: "hello.Greeter", name: "SayHello" }
+  let desc : @moonrpc.Method = { service: "hello.Greeter", name: "SayHello", }
   server.register(desc, req => {
     // echo handler: prepend a byte so we can prove the handler actually ran
     let buf = Buffer()

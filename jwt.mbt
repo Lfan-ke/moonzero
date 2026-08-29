@@ -4,7 +4,7 @@
 /// header, payload, and signature segments.
 pub fn base64url_encode(data : Bytes) -> String {
   let std = @base64.encode(data[:], padding=false)
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i = 0; i < std.length(); i = i + 1 {
     let c = std[i]
     if c == '+' {
@@ -23,7 +23,7 @@ pub fn base64url_encode(data : Bytes) -> String {
 /// `-`/`_` to `+`/`/` before decoding. Lenient about missing padding, the way
 /// JWT segments are written.
 pub fn base64url_decode(s : String) -> Bytes {
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   for i = 0; i < s.length(); i = i + 1 {
     let c = s[i]
     if c == '-' {
@@ -62,7 +62,7 @@ pub suberror JwtError {
 /// token into three segments.
 fn split_char(s : String, delim : Char) -> Array[String] {
   let out : Array[String] = []
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let d = delim.to_int()
   for i = 0; i < s.length(); i = i + 1 {
     if s[i].to_int() == d {

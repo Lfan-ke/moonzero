@@ -11,7 +11,7 @@ pub struct Deadline {
 ///|
 /// Start a deadline of `budget_ms` milliseconds at time `now`.
 pub fn Deadline::start(budget_ms : Int64, now : Int64) -> Deadline {
-  { budget_ms, started_ms: now }
+  { budget_ms, started_ms: now, }
 }
 
 ///|
@@ -73,7 +73,7 @@ pub fn timeout(budget_ms : Int64, clock : Clock) -> Middleware {
       match scope {
         Http(_) => {
           let deadline = Deadline::start(budget_ms, clock.now())
-          let done : Ref[Bool] = { val: false }
+          let done : Ref[Bool] = { val: false, }
           let guarded : @moonasgi.Send = event => {
             if done.val {
               // deadline already answered — drop the handler's late output

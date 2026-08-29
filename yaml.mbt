@@ -55,7 +55,7 @@ fn strip_comment(s : String) -> String {
 /// lines, and record each surviving line's indentation.
 fn yaml_tokenize(src : String) -> Array[YamlLine] {
   let out : Array[YamlLine] = []
-  let sb = StringBuilder::new()
+  let sb = StringBuilder()
   let raw : Array[String] = []
   for i = 0; i < src.length(); i = i + 1 {
     let c = src[i].to_int()
@@ -74,7 +74,7 @@ fn yaml_tokenize(src : String) -> Array[YamlLine] {
     }
     let content = yaml_trim(strip_comment(line[indent:].to_owned()))
     if content.length() > 0 {
-      out.push({ indent, text: content })
+      out.push({ indent, text: content, })
     }
   }
   out
@@ -255,7 +255,7 @@ fn yaml_sequence(
     } else if key_sep(content) is Some(_) {
       // rewrite this line as a mapping entry at the key column, then fold in
       // any aligned continuation lines belonging to the same item
-      lines[cur.val] = { indent: key_col, text: content }
+      lines[cur.val] = { indent: key_col, text: content, }
       arr.push(yaml_mapping(lines, cur, key_col))
     } else {
       cur.val = cur.val + 1
@@ -302,7 +302,7 @@ pub fn yaml_parse(src : String) -> Json raise ConfigError {
   if lines.length() == 0 {
     return Json::object(Map([]))
   }
-  let cur : Ref[Int] = { val: 0 }
+  let cur : Ref[Int] = { val: 0, }
   let root_ind = lines[0].indent
   let doc = if is_seq_item(lines[0].text) {
     yaml_sequence(lines, cur, root_ind)

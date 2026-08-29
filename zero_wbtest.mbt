@@ -1,7 +1,7 @@
 ///|
 /// Build a synthetic request for routing assertions.
 fn mkreq(m : String, path : String) -> @moonasgi.Request {
-  { http_method: m, path, query_string: b"", headers: [], body: b"" }
+  { http_method: m, path, query_string: b"", headers: [], body: b"", }
 }
 
 ///|
@@ -133,7 +133,7 @@ test "cors middleware assembles into an AsgiApp" {
 
 ///|
 test "request-id resolution mints and reuses" {
-  let counter : Ref[Int] = { val: 0 }
+  let counter : Ref[Int] = { val: 0, }
   assert_eq(resolve_request_id(None, counter), "req-1")
   assert_eq(resolve_request_id(None, counter), "req-2")
   assert_eq(resolve_request_id(Some("abc-123"), counter), "abc-123")
