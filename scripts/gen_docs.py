@@ -94,8 +94,27 @@ SECTIONS = [
      "RequestLog captures typed access-log fields (method, path, status, "
      "duration, request-id, client-ip, user-agent) and renders one JSON line "
      "per request; the structured_logging middleware emits it, timed on the clock."),
+    ("etcd", ("etcd.mbt", "etcd_client.mbt", "etcd_discovery.mbt"), "etcd",
+     "The etcd v3 client and the discovery driver over it: leases keep a registered "
+     "instance alive, watches stream membership changes, and a lapsed lease is what "
+     "removes a dead instance."),
+    ("consul", ("consul.mbt", "consul_discovery.mbt"), "consul",
+     "The consul agent API and the discovery driver over it: a service registers "
+     "with a TTL check, a keep-alive passes that check, and deregistering removes "
+     "it — the lease pattern consul spells differently."),
+    ("redis", ("redis.mbt", "redis_discovery.mbt", "resp.mbt"), "redis",
+     "The RESP protocol codec, the redis client over it, and the discovery driver "
+     "that keeps instances in a keyed set with an expiry."),
+    ("transports", ("discov/etcd_socket.mbt", "discov/consul_socket.mbt", "discov/redis_socket.mbt", "http1c.mbt"),
+     "Native transports",
+     "What actually talks to a real server: the etcd gRPC socket, the consul HTTP "
+     "socket, the redis socket, and the minimal HTTP/1.1 client under them. "
+     "Native-only, which is why the portable core is written against traits instead."),
+    ("limiting", ("maxconns.mbt", "periodlimit.mbt"), "Admission control",
+     "The concurrency limiter that sheds load past a ceiling — releasing its permit "
+     "with defer, so cancellation cannot wedge it shut — and the period limiter that "
+     "counts requests per window."),
 ]
-
 KIND = {"struct": "struct", "enum": "enum", "fn": "fn", "type": "type", "let": "let"}
 
 
@@ -302,7 +321,8 @@ def main():
     for sid, rel, title, desc in SECTIONS:
         body.append('<section class="pkg" id="%s"><h2><span class="at">§</span>%s</h2>'
                     '<p class="pdesc">%s</p>' % (sid, title, esc(desc)))
-        for kind, sig, doc in parse(ROOT / rel):
+        files = rel if isinstance(rel, tuple) else (rel,)
+        for kind, sig, doc in [it for f in files for it in parse(ROOT / f)]:
             total += 1
             body.append('<div class="item" data-k="%s"><span class="kind">%s</span>'
                         '<pre class="sig">%s</pre>%s</div>'
