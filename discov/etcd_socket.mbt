@@ -107,6 +107,34 @@ pub async fn EtcdSocket::watch(
 }
 
 ///|
+/// `Lease.LeaseKeepAlive`: renew `id` before its TTL runs out. Without this every
+/// registration lapses at its TTL and the instance silently disappears from
+/// discovery — the grant is the easy half.
+///
+/// etcd defines this as a bidirectional stream so a client can hold one open for
+/// every lease it owns; this sends one renewal and reads its answer, which is what a
+/// timer-driven publisher needs. A returned `ttl` of zero means the lease was
+/// already gone and the caller has to register again rather than keep renewing.
+pub async fn EtcdSocket::lease_keep_alive(
+  self : EtcdSocket,
+  req : @moonzero.EtcdLeaseKeepAliveRequest,
+) -> @moonzero.EtcdLeaseKeepAliveResponse {
+  let reply = self.channel.bidi("/etcdserverpb.Lease/LeaseKeepAlive", [
+    req.encode(),
+  ])
+  if reply.grpc_status != 0 {
+    raise EtcdSocketError(
+      "/etcdserverpb.Lease/LeaseKeepAlive -> grpc-status " +
+      reply.grpc_status.to_string(),
+    )
+  }
+  guard reply.messages.length() > 0 else {
+    raise EtcdSocketError("LeaseKeepAlive returned no response")
+  }
+  @moonzero.EtcdLeaseKeepAliveResponse::decode(reply.messages[0])
+}
+
+///|
 /// `Lease.LeaseGrant`: obtain a lease with the requested TTL.
 pub async fn EtcdSocket::lease_grant(
   self : EtcdSocket,

@@ -8,6 +8,7 @@ import {
   "Lfan-ke/moonzero",
   "Lfan-ke/moonrpc",
   "Lfan-ke/moonrpc/net",
+  "moonbitlang/async",
   "moonbitlang/async/fs",
   "moonbitlang/async/io",
   "moonbitlang/async/socket",
