@@ -1,6 +1,6 @@
 name = "Lfan-ke/moonzero"
 
-version = "0.6.3"
+version = "0.7.1"
 
 readme = "README.md"
 
@@ -22,6 +22,6 @@ description = "moonzero — a service framework for MoonBit (← go-zero): confi
 import {
   "Lfan-ke/moonapi@0.7.0",
   "Lfan-ke/moonasgi@0.8.0",
-  "Lfan-ke/moonrpc@0.9.0",
+  "Lfan-ke/moonrpc@0.10.0",
   "moonbitlang/async@0.20.3",
 }

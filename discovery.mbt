@@ -401,10 +401,7 @@ pub fn RpcCluster::add(
 ///|
 /// Open a channel to the server bound at `endpoint`, or `None` if nothing is
 /// reachable there (a stale registry entry pointing at a gone instance).
-pub fn RpcCluster::dial(
-  self : RpcCluster,
-  endpoint : Endpoint,
-) -> RpcChannel? raise {
+pub fn RpcCluster::dial(self : RpcCluster, endpoint : Endpoint) -> RpcChannel? {
   match self.servers.get(endpoint.address()) {
     Some(server) =>
       Some(RpcChannel::connect(server, authority=endpoint.address()))
@@ -444,7 +441,7 @@ pub fn LoadBalancedChannel::new(
 /// no subchannel is ready.
 fn LoadBalancedChannel::pick_channel(
   self : LoadBalancedChannel,
-) -> Result[RpcChannel, @moonrpc.Status] raise {
+) -> Result[RpcChannel, @moonrpc.Status] {
   let endpoints = (self.resolve)(self.service)
   match self.balancer.pick(endpoints) {
     None => Err(@moonrpc.Status::Unavailable)

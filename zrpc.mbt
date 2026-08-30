@@ -115,7 +115,7 @@ pub struct RpcChannel {
 pub fn RpcChannel::connect(
   server : RpcServer,
   authority? : String = "localhost",
-) -> RpcChannel raise {
+) -> RpcChannel {
   let engine = server.to_h2()
   let ch = {
     engine,
@@ -375,7 +375,7 @@ fn drain_messages(body : Bytes) -> (Array[Bytes], Bytes) {
 fn RpcChannel::open(
   self : RpcChannel,
   path : String,
-) -> (Int, Array[@moonrpc.Frame]) raise {
+) -> (Int, Array[@moonrpc.Frame]) {
   let sid = self.next_stream_id
   self.next_stream_id = self.next_stream_id + 2
   let block = self.encoder.encode([
@@ -407,7 +407,7 @@ fn RpcChannel::feed_data(
   sid : Int,
   payload : Bytes,
   end : Bool,
-) -> Array[@moonrpc.Frame] raise {
+) -> Array[@moonrpc.Frame] {
   self.engine.feed(Data(stream_id=sid, data=payload, end_stream=end, padding=0))
 }
 

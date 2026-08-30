@@ -778,14 +778,14 @@ pub fn RpcChannel::call(Self, String, Bytes) -> Result[Bytes, @moonrpc.Status] r
 pub fn RpcChannel::call_bidi_streaming(Self, String, Array[Bytes]) -> Result[Array[Bytes], @moonrpc.Status] raise
 pub fn RpcChannel::call_client_streaming(Self, String, Array[Bytes]) -> Result[Bytes, @moonrpc.Status] raise
 pub fn RpcChannel::call_server_streaming(Self, String, Bytes) -> Result[Array[Bytes], @moonrpc.Status] raise
-pub fn RpcChannel::connect(RpcServer, authority? : String) -> Self raise
+pub fn RpcChannel::connect(RpcServer, authority? : String) -> Self
 pub fn RpcChannel::open_bidi(Self, String) -> BidiCall raise
 
 pub struct RpcCluster {
   servers : Map[String, RpcServer]
 }
 pub fn RpcCluster::add(Self, Endpoint, RpcServer) -> Unit
-pub fn RpcCluster::dial(Self, Endpoint) -> RpcChannel? raise
+pub fn RpcCluster::dial(Self, Endpoint) -> RpcChannel?
 pub fn RpcCluster::new() -> Self
 
 pub struct RpcGroup {
