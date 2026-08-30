@@ -73,55 +73,6 @@ test "token bucket: default burst equals the rate" {
 }
 
 ///|
-test "breaker trips after K consecutive failures, then recovers via half-open" {
-  let b = Breaker::new(max_failures=3, open_ms=1000L, half_open_max=1)
-  assert_eq(b.state() == Closed, true)
-  assert_eq(b.allow(0L), true)
-  b.record_failure(0L) // 1
-  b.record_failure(0L) // 2
-  assert_eq(b.state() == Closed, true) // not yet
-  b.record_failure(0L) // 3 -> trips Open
-  assert_eq(b.state() == Open, true)
-  // fails fast while open
-  assert_eq(b.allow(0L), false)
-  assert_eq(b.allow(500L), false)
-  // once the open window elapses, one probe is admitted (half-open)
-  assert_eq(b.allow(1000L), true)
-  assert_eq(b.state() == HalfOpen, true)
-  // half_open_max == 1, so a second concurrent probe is denied
-  assert_eq(b.allow(1000L), false)
-  // probe succeeds -> closed again
-  b.record_success()
-  assert_eq(b.state() == Closed, true)
-  assert_eq(b.allow(1000L), true)
-}
-
-///|
-test "breaker: a half-open probe failure re-opens immediately" {
-  let b = Breaker::new(max_failures=2, open_ms=500L, half_open_max=1)
-  b.record_failure(0L)
-  b.record_failure(0L) // -> Open at t=0
-  assert_eq(b.state() == Open, true)
-  assert_eq(b.allow(500L), true) // half-open probe
-  assert_eq(b.state() == HalfOpen, true)
-  b.record_failure(500L) // probe fails -> Open again, window restarts
-  assert_eq(b.state() == Open, true)
-  assert_eq(b.allow(500L), false)
-  assert_eq(b.allow(1000L), true) // window elapsed from t=500
-}
-
-///|
-test "breaker: a success in closed state clears the failure streak" {
-  let b = Breaker::new(max_failures=3)
-  b.record_failure(0L)
-  b.record_failure(0L)
-  b.record_success() // streak reset
-  b.record_failure(0L)
-  b.record_failure(0L)
-  assert_eq(b.state() == Closed, true) // only 2 since the reset
-}
-
-///|
 test "deadline expiry and remaining budget" {
   let d = Deadline::start(1000L, 0L)
   assert_eq(d.expired(500L), false)
@@ -196,7 +147,7 @@ test "resilience middlewares assemble onto an AsgiApp" {
     .use_(maxbytes(1024))
     .use_(max_conns(MaxConns::new(100)))
     .use_(rate_limit(TokenBucket::new(10.0, now=0L), ck))
-    .use_(breaker(Breaker::new(), ck))
+    .use_(breaker(Breaker::new(ck)))
     .use_(timeout(2000L, ck))
     .use_(structured_logging(ck))
   let _ = assembled.to_asgi()

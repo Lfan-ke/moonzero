@@ -16,7 +16,7 @@ pub fn base64url_decode(String) -> Bytes
 
 pub fn base64url_encode(Bytes) -> String
 
-pub fn breaker(Breaker, Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub fn breaker(Breaker) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
 
 pub fn constant_time_eq(Bytes, Bytes) -> Bool
 
@@ -70,6 +70,8 @@ pub fn parse_traceparent(String) -> TraceContext?
 
 pub fn period_limit(PeriodLimit, Clock, key? : String) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
 
+pub let period_script : String
+
 pub fn pick_first(Array[Endpoint]) -> Endpoint?
 
 pub fn rate_limit(TokenBucket, Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
@@ -77,6 +79,10 @@ pub fn rate_limit(TokenBucket, Clock) -> (async (@moonasgi.Scope, async () -> @m
 pub fn recovery(async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
 
 pub fn redis_instance_key(String, String, Endpoint) -> String
+
+pub fn redis_period_limit(RedisPeriodLimit, key? : String) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub fn redis_rate_limit(RedisTokenLimit, Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
 
 pub fn redis_service_pattern(String, String) -> String
 
@@ -99,6 +105,8 @@ pub fn status_of_code(Int) -> @moonrpc.Status
 pub fn structured_logging(Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
 
 pub fn timeout(Int64, Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub let token_script : String
 
 pub fn tracing(header? : String) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
 
@@ -137,6 +145,8 @@ pub suberror RespError {
   RespError(String)
 }
 
+pub suberror Unavailable
+
 // Types and methods
 pub(all) enum Balancer {
   RoundRobinBalancer(RoundRobin)
@@ -161,26 +171,22 @@ pub(all) struct BidiStreamHandler {
 }
 
 pub struct Breaker {
-  max_failures : Int
-  open_ms : Int64
-  half_open_max : Int
-  mut state : BreakerState
-  mut failures : Int
-  mut opened_at : Int64
-  mut probes : Int
+  win : Window
+  clock : Clock
+  roll : () -> Double
+  mut last_pass : Int64?
 }
-pub fn Breaker::allow(Self, Int64) -> Bool
-pub fn Breaker::new(max_failures? : Int, open_ms? : Int64, half_open_max? : Int) -> Self
-pub fn Breaker::record_failure(Self, Int64) -> Unit
-pub fn Breaker::record_success(Self) -> Unit
-pub fn Breaker::state(Self) -> BreakerState
+pub fn Breaker::allow(Self) -> Promise?
+pub fn Breaker::drop_ratio(Self) -> Double
+pub fn Breaker::new(Clock, rand? : () -> Double, buckets? : Int, bucket_ms? : Int64) -> Self
+pub fn[T] Breaker::run(Self, () -> T raise) -> T raise
 
-pub(all) enum BreakerState {
-  Closed
-  Open
-  HalfOpen
-} derive(Eq)
-pub fn BreakerState::to_string(Self) -> String
+pub struct Bucket {
+  mut sum : Int64
+  mut succ : Int64
+  mut fail : Int64
+  mut drop : Int64
+}
 
 pub struct Clock {
   now_ms : () -> Int64
@@ -488,6 +494,12 @@ pub fn MaxConns::new(Int) -> Self
 pub fn MaxConns::release(Self) -> Unit
 pub fn MaxConns::try_acquire(Self) -> Bool
 
+pub(all) enum Outcome {
+  Succ
+  Fail
+  Drop
+} derive(Eq, @debug.Debug)
+
 pub struct PeriodLimit {
   period_ms : Int64
   quota : Int
@@ -523,29 +535,72 @@ pub fn PersistentRegistry::services(Self) -> Array[String]
 pub fn PersistentRegistry::snapshot(Self) -> String
 pub fn PersistentRegistry::watch(Self, (RegistryEvent) -> Unit) -> Unit
 
+pub struct Promise {
+  b : Breaker
+}
+pub fn Promise::accept(Self) -> Unit
+pub fn Promise::reject(Self) -> Unit
+
 pub struct RedisClient {
   conn : &RedisConn
 }
-pub fn RedisClient::command(Self, Array[Bytes]) -> RespValue raise RedisError
-pub fn RedisClient::del(Self, Array[Bytes]) -> Int64 raise RedisError
-pub fn RedisClient::expire(Self, Bytes, Int) -> Bool raise RedisError
-pub fn RedisClient::get(Self, Bytes) -> Bytes? raise RedisError
+pub async fn RedisClient::command(Self, Array[Bytes]) -> RespValue raise RedisError
+pub async fn RedisClient::del(Self, Array[Bytes]) -> Int64 raise RedisError
+pub async fn RedisClient::eval(Self, String, Array[Bytes], Array[Bytes]) -> RespValue raise RedisError
+pub async fn RedisClient::evalsha(Self, String, Array[Bytes], Array[Bytes]) -> RespValue raise RedisError
+pub async fn RedisClient::expire(Self, Bytes, Int) -> Bool raise RedisError
+pub async fn RedisClient::get(Self, Bytes) -> Bytes? raise RedisError
 pub fn RedisClient::new(&RedisConn) -> Self
-pub fn RedisClient::ping(Self) -> String raise RedisError
-pub fn RedisClient::scan_match(Self, Bytes, Int) -> Array[Bytes] raise RedisError
-pub fn RedisClient::set_ex(Self, Bytes, Bytes, Int) -> Unit raise RedisError
+pub async fn RedisClient::ping(Self) -> String raise RedisError
+pub async fn RedisClient::scan_match(Self, Bytes, Int) -> Array[Bytes] raise RedisError
+pub async fn RedisClient::script_load(Self, String) -> String raise RedisError
+pub async fn RedisClient::set_ex(Self, Bytes, Bytes, Int) -> Unit raise RedisError
 
 pub struct RedisDiscovery {
   client : RedisClient
   prefix : String
+  seen : Map[String, Array[Endpoint]]
 }
-pub fn RedisDiscovery::deregister(Self, String) -> Unit raise
-pub fn RedisDiscovery::deregister_instance(Self, String, Endpoint) -> Unit raise
-pub fn RedisDiscovery::keepalive(Self, String, Endpoint, ttl? : Int) -> Bool raise
+pub async fn RedisDiscovery::deregister(Self, String) -> Unit
+pub async fn RedisDiscovery::deregister_instance(Self, String, Endpoint) -> Unit
+pub async fn RedisDiscovery::keepalive(Self, String, Endpoint, ttl? : Int) -> Bool
+pub fn RedisDiscovery::last(Self, String) -> Array[Endpoint]
 pub fn RedisDiscovery::new(RedisClient, prefix? : String) -> Self
-pub fn RedisDiscovery::register(Self, String, Endpoint, ttl? : Int) -> String raise
-pub fn RedisDiscovery::resolve(Self, String) -> Array[Endpoint] raise
+pub async fn RedisDiscovery::register(Self, String, Endpoint, ttl? : Int) -> String
+pub async fn RedisDiscovery::resolve(Self, String) -> Array[Endpoint]
 pub fn RedisDiscovery::resolver(Self) -> (String) -> Array[Endpoint]
+
+pub struct RedisPeriodLimit {
+  client : RedisClient
+  script : RedisScript
+  period_secs : Int
+  quota : Int
+  prefix : String
+}
+pub fn RedisPeriodLimit::new(RedisClient, period_secs~ : Int, quota~ : Int, prefix? : String) -> Self
+pub async fn RedisPeriodLimit::take(Self, String) -> PeriodResult raise RedisError
+
+pub struct RedisScript {
+  source : String
+  mut sha : String?
+}
+pub fn RedisScript::new(String) -> Self
+pub async fn RedisScript::run(Self, RedisClient, Array[Bytes], Array[Bytes]) -> RespValue raise RedisError
+pub fn RedisScript::source(Self) -> String
+
+pub struct RedisTokenLimit {
+  client : RedisClient
+  script : RedisScript
+  rate : Int
+  burst : Int
+  token_key : Bytes
+  ts_key : Bytes
+  rescue : TokenBucket
+}
+pub async fn RedisTokenLimit::allow(Self, Int64) -> Bool
+pub async fn RedisTokenLimit::allow_n(Self, Int, Int64) -> Bool
+pub fn RedisTokenLimit::new(RedisClient, rate~ : Int, burst~ : Int, key~ : String) -> Self
+pub fn RedisTokenLimit::rescue(Self) -> TokenBucket
 
 pub(all) enum RegistryEvent {
   Put(key~ : String, endpoint~ : Endpoint, revision~ : Int64)
@@ -720,6 +775,17 @@ pub fn TraceContext::span_id(Self) -> String
 pub fn TraceContext::to_traceparent(Self) -> String
 pub fn TraceContext::trace_id(Self) -> String
 
+pub struct Window {
+  size : Int
+  bucket_ms : Int64
+  buckets : Array[Bucket]
+  mut offset : Int
+  mut bucket_start : Int64
+}
+pub fn Window::add(Self, Outcome, Int64) -> Unit
+pub fn Window::each(Self, Int64, (Bucket) -> Unit) -> Unit
+pub fn Window::new(size? : Int, bucket_ms? : Int64, now? : Int64) -> Self
+
 // Type aliases
 pub type BidiStreamFactory = () -> BidiStreamHandler
 
@@ -738,6 +804,6 @@ pub trait ConsulHttp {
   fn request(Self, String, String, Bytes) -> ConsulResponse raise
 }
 
-pub trait RedisConn {
-  fn execute(Self, Array[Bytes]) -> RespValue raise
+pub(open) trait RedisConn {
+  async fn execute(Self, Array[Bytes]) -> RespValue
 }

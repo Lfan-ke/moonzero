@@ -83,9 +83,14 @@ SECTIONS = [
     ("ratelimit", "ratelimit.mbt", "Rate limiting",
      "A token-bucket limiter (pure counter over the clock) and the rate_limit "
      "middleware, which answers 429 Too Many Requests when the bucket is empty."),
+    ("window", "window.mbt", "Rolling window",
+     "A window of call outcomes in time buckets (40 x 250ms, go-zero's ten "
+     "seconds), which ages out on its own and is what the breaker reads a "
+     "backend's recent health from."),
     ("breaker", "breaker.mbt", "Circuit breaker",
-     "A closed/open/half-open breaker state machine and the breaker middleware, "
-     "which trips after K consecutive failures and fails fast with 503 while open."),
+     "go-zero's googleBreaker: Google SRE client-side throttling over the "
+     "rolling window, which sheds a computed fraction of calls rather than "
+     "opening, and the breaker middleware that answers 503 for a shed request."),
     ("limits", "limits.mbt", "Timeout & max-bytes",
      "A request Deadline plus the timeout middleware (deadline-enforced on the "
      "response path; preemptive cancel is the async boundary) and maxbytes, "

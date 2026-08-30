@@ -1,7 +1,7 @@
 ///|
 /// Gate a request through each resilience middleware and watch the status it
 /// answers: auth (401 without a Bearer JWT), rate-limit and period-limit (429 once
-/// the budget is spent), the breaker (503 while open), timeout (503 past the
+/// the budget is spent), the breaker (503 while shedding), timeout (503 past the
 /// deadline), max-bytes (413 over the limit), and max-conns (admits a request).
 ///
 ///     moon run --target native examples/04-resilience-mw
@@ -35,16 +35,21 @@ async fn main {
   println("period_limit first  -> " + drive(windowed, []))
   println("period_limit second -> " + drive(windowed, []))
 
-  // breaker: a pre-tripped breaker fails fast with 503; a fresh one admits.
-  let tripped = @moonzero.Breaker::new(max_failures=2, open_ms=5000L)
-  tripped.record_failure(0L)
-  tripped.record_failure(0L)
+  // breaker: eight failures past the protection floor, drawn against a roll of
+  // 0.0 that loses every time, put the throttle at 503; a healthy one admits.
+  let shedding = @moonzero.Breaker::new(clk0, rand=() => 0.0)
+  for _ in 0..<8 {
+    match shedding.allow() {
+      Some(p) => p.reject()
+      None => ()
+    }
+  }
   println(
-    "breaker open   -> " + drive(@moonzero.breaker(tripped, clk0)(base()), []),
+    "breaker shedding -> " + drive(@moonzero.breaker(shedding)(base()), []),
   )
   println(
-    "breaker closed -> " +
-    drive(@moonzero.breaker(@moonzero.Breaker::new(), clk0)(base()), []),
+    "breaker healthy  -> " +
+    drive(@moonzero.breaker(@moonzero.Breaker::new(clk0))(base()), []),
   )
 
   // timeout: within budget passes, past the deadline answers 503.

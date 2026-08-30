@@ -1,10 +1,10 @@
-// RESP over a real TCP socket: a redis connection the discovery flow drives against a
-// live redis. moonzero's root `RedisConn` is synchronous (so the driver logic and its
-// mock run on every backend), but socket I/O is async, so the real connection is a
-// separate native-only path here — it reuses the root's pure RESP codec
+// RESP over a real TCP socket: the redis connection the discovery flow and the shared
+// limiters drive against a live redis. It reuses the root's pure RESP codec
 // (`resp_encode_command` to frame a command, `RespValue::decode` to parse a reply) and
-// only adds the async send and the framed receive. Native-only, because
-// `moonbitlang/async` has no JS/Wasm backend.
+// only adds the async send and the framed receive, then hands itself to the root as a
+// `RedisConn` — so `RedisClient`, `RedisDiscovery`, `RedisPeriodLimit` and
+// `RedisTokenLimit` all run against a real server through this file. Native-only,
+// because `moonbitlang/async` has no JS/Wasm backend.
 
 ///|
 /// A framing or connection error on a RESP socket.
@@ -43,6 +43,21 @@ pub async fn RedisSocket::execute(
   let buf = Buffer()
   self.read_frame(buf)
   @moonzero.RespValue::decode(buf.to_bytes())
+}
+
+///|
+/// The socket is what a `RedisClient` — and through it a discovery driver or a shared
+/// limiter — sends its commands over.
+impl @moonzero.RedisConn for RedisSocket with fn execute(self, args) {
+  self.execute(args)
+}
+
+///|
+/// A `RedisClient` on this socket: the handle production code builds a
+/// `RedisDiscovery`, a `RedisPeriodLimit` or a `RedisTokenLimit` over to have them run
+/// against a real server.
+pub fn RedisSocket::client(self : RedisSocket) -> @moonzero.RedisClient {
+  @moonzero.RedisClient::new(self)
 }
 
 ///|

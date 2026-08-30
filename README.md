@@ -52,13 +52,13 @@ let clock = @moonzero.Clock::new(() => now_ms())     // real time at the async e
 let server = @moonzero.Server::new(conf, app)
   .use_(@moonzero.maxbytes(1 << 20))                                   // 413 over 1 MiB
   .use_(@moonzero.rate_limit(@moonzero.TokenBucket::new(100.0), clock))// 429 when empty
-  .use_(@moonzero.breaker(@moonzero.Breaker::new(), clock))            // 503 while open
+  .use_(@moonzero.breaker(@moonzero.Breaker::new(clock)))              // 503 while shedding
   .use_(@moonzero.timeout(3000L, clock))                              // deadline
   .use_(@moonzero.structured_logging(clock))                          // one JSON line/req
 ```
 
-- **`rate_limit`** — a [`TokenBucket`](./ratelimit.mbt): admits a burst, refills continuously, answers `429` when empty.
-- **`breaker`** — a [`Breaker`](./breaker.mbt) closed/open/half-open state machine: trips after K consecutive failures, fails fast with `503`, then admits half-open probes to test recovery.
+- **`rate_limit`** / **`period_limit`** — a [`TokenBucket`](./ratelimit.mbt) that admits a burst and refills continuously, and a [`PeriodLimit`](./periodlimit.mbt) that counts a fixed window per key; both answer `429` once they run out. Both are process-local, so N replicas admit N quotas — for a fleet use **`redis_rate_limit`** / **`redis_period_limit`** over `RedisTokenLimit` / `RedisPeriodLimit`, which run go-zero's `tokenscript.lua` and `periodscript.lua` in redis so every replica draws on one bucket or one window. An unreachable redis leaves the token limiter running on its local bucket (go-zero's `rescueLimiter`) rather than opening the gate.
+- **`breaker`** — a [`Breaker`](./breaker.mbt): go-zero's `googleBreaker`, Google SRE's client-side throttle. It keeps a [`Window`](./window.mbt) of the last 10s in 40 buckets and sheds a *fraction* of calls, `(total - 5 - max(w, 1.1) * accepts) / (total + 1)` scaled by the run of clean buckets, answering `503` for the ones it sheds — a struggling backend keeps whatever load it can still serve instead of being cut off wholesale. The clock and the shed roll are both injected, so the decisions are exactly reproducible.
 - **`timeout`** — a [`Deadline`](./limits.mbt) enforced on the response path. Preemptively aborting a hung handler needs racing it against a timer (`@async.any`) under the native runtime; that race is wired at the async server edge, the deadline core is portable and tested.
 - **`maxbytes`** — rejects a request whose declared `Content-Length` exceeds the limit with `413`.
 - **`structured_logging`** — a [`RequestLog`](./logging.mbt) rendered as one JSON line per request (method, path, status, duration, request-id, client-ip, user-agent).

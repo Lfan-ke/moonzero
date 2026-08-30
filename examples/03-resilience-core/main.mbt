@@ -19,26 +19,29 @@ fn main {
   println("  available after 1s refill: " + bucket.available(1000L).to_string())
   println("  admits again once refilled: " + bucket.allow(1000L).to_string())
 
-  // Breaker: two consecutive failures trip it Open; after the cool-down it admits
-  // one HalfOpen probe, and a probe success closes it again.
-  let breaker = @moonzero.Breaker::new(
-    max_failures=2,
-    open_ms=1000L,
-    half_open_max=1,
-  )
-  breaker.record_failure(0L)
-  breaker.record_failure(0L)
-  println("breaker after 2 failures: " + breaker.state().to_string())
-  println("  admits while open (t=500): " + breaker.allow(500L).to_string())
-  let probe = breaker.allow(1000L)
+  // Breaker: Google SRE throttling. A roll of 1.0 loses no draw, so the ratio
+  // printed here is the formula alone; the first five failures are free.
+  let clock = @moonzero.ManualClock::new().as_clock()
+  let breaker = @moonzero.Breaker::new(clock, rand=() => 1.0)
+  let ratios = []
+  for _ in 0..<8 {
+    reject(breaker)
+    ratios.push(breaker.drop_ratio().to_string())
+  }
+  println("breaker drop ratio, failure by failure: " + join(ratios))
+
+  // The same eight failures under a roll of 0.0, which loses every draw: once
+  // the ratio leaves zero the breaker starts shedding calls outright.
+  let shedding = @moonzero.Breaker::new(clock, rand=() => 0.0)
+  for _ in 0..<8 {
+    reject(shedding)
+  }
   println(
-    "  admits half-open probe (t=1000): " +
-    probe.to_string() +
-    ", state=" +
-    breaker.state().to_string(),
+    "  sheds the next call: " +
+    (shedding.allow() is None).to_string() +
+    ", ratio=" +
+    shedding.drop_ratio().to_string(),
   )
-  breaker.record_success()
-  println("  after probe success: " + breaker.state().to_string())
 
   // Deadline: a budget measured from a start instant; a non-positive budget never
   // expires (go-zero's disabled-timeout convention).
@@ -80,6 +83,16 @@ fn main {
   println(
     "  next window (t=1s) resets: " + period_name(period.take("k", 1000L)),
   )
+}
+
+///|
+/// Take one call through the breaker and settle it as a failure, or let the
+/// throttle shed it.
+fn reject(b : @moonzero.Breaker) -> Unit {
+  match b.allow() {
+    Some(p) => p.reject()
+    None => ()
+  }
 }
 
 ///|

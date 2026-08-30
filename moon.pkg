@@ -9,5 +9,6 @@ import {
   "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/double",
+  "moonbitlang/core/random",
   "moonbitlang/core/string",
 }

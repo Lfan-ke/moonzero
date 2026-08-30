@@ -39,11 +39,15 @@ backend (`wasm`, `wasm-gc`, `js`, `native`).
 
 ## A note on the consul / redis client layers
 
-`ConsulClient`/`ConsulDiscovery` and `RedisClient`/`RedisDiscovery` are driven by
-the `ConsulHttp` and `RedisConn` transport traits, which are sealed (`pub trait`),
-so only moonzero's own package can supply a fake transport. The full
-register → resolve → deregister flow over an in-memory fake therefore lives in the
-white-box tests (`consul_discovery_wbtest.mbt`, `redis_discovery_wbtest.mbt`);
-examples 11 and 12 exercise the request-shaping, parsing, key-layout, and
-RESP-codec surface those layers are built on, which is public and runs on every
-backend.
+`ConsulClient`/`ConsulDiscovery` are driven by the `ConsulHttp` transport trait,
+which is sealed (`pub trait`), so only moonzero's own package can supply a fake
+transport; the full register → resolve → deregister flow over an in-memory fake
+therefore lives in `consul_discovery_wbtest.mbt`, and example 11 exercises the
+request-shaping and parsing surface underneath it.
+
+`RedisConn` is open and `async`, so anyone can implement it — `discov`'s
+`RedisSocket` does, which is what puts `RedisClient`, `RedisDiscovery` and the two
+shared limiters on a real server. Because it is async, its round trips cannot run
+in a synchronous example or a root test: they live in `discov/redis_fake_test.mbt`
+and `discov/redis_limit_test.mbt`. Example 12 covers the RESP codec and key layout
+underneath, which is pure and runs on every backend.

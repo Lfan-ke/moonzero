@@ -3,8 +3,8 @@
 /// RESP array of bulk strings, decode every RESP2 and RESP3 reply shape back into a
 /// `RespValue`, stream several pipelined replies through a `RespReader`, and build
 /// the discovery keys. The `RedisClient`/`RedisDiscovery` layer that carries these
-/// bytes over a socket rides a sealed `RedisConn` transport (exercised by the
-/// in-repo white-box tests — see the note in the examples README).
+/// bytes over a socket rides the async `RedisConn` transport, which cannot be driven
+/// from a synchronous example — see the note in the examples README.
 ///
 ///     moon run examples/12-redis
 #coverage.skip
