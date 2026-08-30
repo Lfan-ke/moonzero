@@ -25,17 +25,13 @@ pub fn RpcServerConf::new(
 ///|
 /// Load an `RpcServerConf` from a JSON config string, filling omitted fields
 /// from the `new()` defaults — the lenient loader matching go-zero's
-/// `,optional`/`,default=` config tags.
+/// `,optional`/`,default=` config tags. Keys are matched canonically, so
+/// go-zero's `Name`/`Host`/`Port`/`Timeout` load as readily as moonzero's own
+/// `timeout_ms`.
 pub fn RpcServerConf::from_json(
   src : String,
 ) -> RpcServerConf raise ConfigError {
-  let root = @json.parse(src) catch {
-    err => raise ConfigError("invalid JSON: " + err.to_string())
-  }
-  match root {
-    Object(m) => rpc_conf_of_object(m)
-    _ => raise ConfigError("rpc config root must be a JSON object")
-  }
+  rpc_conf_of(Conf::of_json(src))
 }
 
 ///|
@@ -44,24 +40,19 @@ pub fn RpcServerConf::from_json(
 pub fn RpcServerConf::from_yaml(
   src : String,
 ) -> RpcServerConf raise ConfigError {
-  match yaml_parse(src) {
-    Object(m) => rpc_conf_of_object(m)
-    _ => raise ConfigError("rpc config root must be a YAML mapping")
-  }
+  rpc_conf_of(Conf::of_yaml(src))
 }
 
 ///|
-/// Decode an `RpcServerConf` from a parsed config object, filling omitted fields
-/// from `RpcServerConf::new()`. Shared by the JSON and YAML loaders.
-fn rpc_conf_of_object(
-  obj : Map[String, Json],
-) -> RpcServerConf raise ConfigError {
+/// Decode an `RpcServerConf` from a loaded document, filling omitted fields from
+/// `RpcServerConf::new()`. Shared by the JSON and YAML loaders.
+fn rpc_conf_of(c : Conf) -> RpcServerConf raise ConfigError {
   let def = RpcServerConf::new()
   {
-    name: string_field(obj, "name", def.name),
-    host: string_field(obj, "host", def.host),
-    port: int_field(obj, "port", def.port),
-    timeout_ms: int_field(obj, "timeout_ms", def.timeout_ms),
+    name: c.string("Name", default=def.name),
+    host: c.string("Host", default=def.host),
+    port: c.int("Port", default=def.port),
+    timeout_ms: c.int("Timeout", default=def.timeout_ms, also=["TimeoutMs"]),
   }
 }
 

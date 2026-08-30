@@ -96,12 +96,14 @@ pub fn Server::describe(self : Server) -> String {
 }
 
 ///|
-/// A request-logging middleware: prints `METHOD path` for each HTTP request, then
-/// delegates to the wrapped application.
+/// A request-logging middleware: writes `METHOD path` through the process `logx`
+/// at `info` for each HTTP request, then delegates to the wrapped application.
+/// It logs on the way in and knows nothing of the response; `structured_logging`
+/// is the layer that times the request and records its status.
 pub fn logging(inner : @moonasgi.AsgiApp) -> @moonasgi.AsgiApp {
   (scope, receive, send) => {
     match scope {
-      Http(hs) => println(hs.http_method + " " + hs.path)
+      Http(hs) => logx.info(hs.http_method + " " + hs.path)
       _ => ()
     }
     inner(scope, receive, send)

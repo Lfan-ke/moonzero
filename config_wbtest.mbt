@@ -69,14 +69,20 @@ test "loader rejects malformed input" {
 }
 
 ///|
-test "log level decodes leniently from a JSON string" {
+test "log level decodes from a JSON string, and only from the four names" {
   assert_eq(
     ServiceConf::from_json("{\"log_level\":\"severe\"}").log_level,
     Severe,
   )
-  // unrecognised level falls back to Info (go-zero's lenient default)
-  assert_eq(
-    ServiceConf::from_json("{\"log_level\":\"chatty\"}").log_level,
-    Info,
-  )
+  // go-zero tags the level `options=[debug,info,error,severe]`, so a name outside
+  // that set is a config error rather than a quiet downgrade to info
+  try {
+    let _ = ServiceConf::from_json("{\"log_level\":\"chatty\"}")
+  } catch {
+    ConfigError(_) => ()
+  } noraise {
+    _ => fail("an unknown level must not load as info")
+  }
+  // LogLevel::parse itself stays lenient: it is the wire decoder, not the loader
+  assert_eq(LogLevel::parse("chatty"), Info)
 }

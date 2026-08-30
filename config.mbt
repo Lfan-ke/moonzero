@@ -1,6 +1,8 @@
 ///|
-/// A config-loading failure (← go-zero's `conf.Load` errors): malformed JSON, a
-/// non-object root, or a field of the wrong type, with a human-readable reason.
+/// A config-loading failure (← go-zero's `conf.Load` errors): malformed JSON or
+/// YAML, a non-mapping root, a field of the wrong type, a required field with no
+/// value, or a value outside its `options=`/`range=` constraint, with a
+/// human-readable reason.
 pub suberror ConfigError {
   ConfigError(String)
 }
@@ -18,6 +20,11 @@ pub impl @json.FromJson for LogLevel with fn from_json(json, path) {
 }
 
 ///|
+/// The level names go-zero's `LogConf.Level` accepts (`options=[...]`). A level
+/// outside this set is a config error, not a silent fallback.
+let log_levels : Array[String] = ["debug", "info", "error", "severe"]
+
+///|
 /// Load a `ServiceConf` from a JSON config string, applying go-zero-style
 /// defaults for every omitted field (an empty `{}` yields exactly
 /// `ServiceConf::new()`). This is the lenient loader mirroring go-zero's
@@ -26,17 +33,18 @@ pub impl @json.FromJson for LogLevel with fn from_json(json, path) {
 /// field present — a partial config is filled from the same defaults `new()`
 /// uses.
 ///
-/// Raises `ConfigError` on malformed JSON, a non-object root, or a field of the
-/// wrong type.
+/// Keys are matched canonically, so go-zero's `Name`/`Host`/`Port`/`Timeout` and
+/// moonzero's own `timeout_ms`/`log_level` spellings all load.
+///
+/// Raises `ConfigError` on malformed JSON, a non-object root, a field of the
+/// wrong type, or a log level outside `debug|info|error|severe`.
 pub fn ServiceConf::from_json(src : String) -> ServiceConf raise ConfigError {
-  let root = @json.parse(src) catch {
-    err => raise ConfigError("invalid JSON: " + err.to_string())
-  }
-  let obj = match root {
-    Object(m) => m
-    _ => raise ConfigError("config root must be a JSON object")
-  }
-  service_conf_of_object(obj)
+  let def = ServiceConf::new()
+  service_conf_of(
+    Conf::of_json(src),
+    name_default=def.name,
+    port_default=def.port,
+  )
 }
 
 ///|
@@ -48,62 +56,49 @@ pub fn ServiceConf::from_json(src : String) -> ServiceConf raise ConfigError {
 /// nesting, sequences, scalars, comments) into a `Json` object, then decoded by
 /// the shared field reader — so JSON and YAML configs agree field-for-field.
 ///
-/// Raises `ConfigError` on malformed YAML, a non-mapping root, or a field of the
-/// wrong type.
+/// Raises `ConfigError` on malformed YAML, a non-mapping root, a field of the
+/// wrong type, or a log level outside `debug|info|error|severe`.
 pub fn ServiceConf::from_yaml(src : String) -> ServiceConf raise ConfigError {
-  let obj = match yaml_parse(src) {
-    Object(m) => m
-    _ => raise ConfigError("config root must be a YAML mapping")
-  }
-  service_conf_of_object(obj)
+  let def = ServiceConf::new()
+  service_conf_of(
+    Conf::of_yaml(src),
+    name_default=def.name,
+    port_default=def.port,
+  )
 }
 
 ///|
-/// Decode a `ServiceConf` from an already-parsed config object, filling every
-/// omitted field from `ServiceConf::new()`'s defaults. Shared by the JSON and
-/// YAML loaders so both formats apply identical lenient semantics.
-fn service_conf_of_object(
-  obj : Map[String, Json],
+/// Decode a `ServiceConf` from a loaded document. Shared by the standalone
+/// loaders and by `RestConf`, which differ only in whether `Name` and `Port` have
+/// a default: the standalone loaders pass the `new()` values, `RestConf` passes
+/// none so a rest service must name itself and its port, as go-zero requires.
+///
+/// The paths are go-zero's (`Name`, `Host`, `Port`, `Timeout`, `Log.Level`); the
+/// alternative spellings are the flat keys moonzero's own configs and examples
+/// were written with, kept so those keep loading.
+fn service_conf_of(
+  c : Conf,
+  name_default? : String,
+  port_default? : Int,
 ) -> ServiceConf raise ConfigError {
   let def = ServiceConf::new()
-  let name = string_field(obj, "name", def.name)
-  let host = string_field(obj, "host", def.host)
-  let port = int_field(obj, "port", def.port)
-  let timeout_ms = int_field(obj, "timeout_ms", def.timeout_ms)
-  let log_level = match obj.get("log_level") {
-    Some(String(s)) => LogLevel::parse(s)
-    Some(_) => raise ConfigError("log_level must be a JSON string")
-    None => def.log_level
-  }
+  let name = c.string("Name", default?=name_default, env="MOONZERO_NAME")
+  let host = c.string("Host", default=def.host, env="MOONZERO_HOST")
+  let port = c.int("Port", default?=port_default, env="MOONZERO_PORT")
+  let timeout_ms = c.int(
+    "Timeout",
+    default=def.timeout_ms,
+    env="MOONZERO_TIMEOUT",
+    also=["TimeoutMs"],
+  )
+  let log_level = LogLevel::parse(
+    c.string(
+      "Log.Level",
+      default=def.log_level.to_string(),
+      options=log_levels,
+      env="MOONZERO_LOG_LEVEL",
+      also=["LogLevel"],
+    ),
+  )
   { name, host, port, timeout_ms, log_level, }
-}
-
-///|
-/// Read a string field, falling back to `default` when absent; raises on a
-/// present-but-non-string value.
-fn string_field(
-  obj : Map[String, Json],
-  key : String,
-  default : String,
-) -> String raise ConfigError {
-  match obj.get(key) {
-    Some(String(s)) => s
-    Some(_) => raise ConfigError(key + " must be a JSON string")
-    None => default
-  }
-}
-
-///|
-/// Read an integer field, falling back to `default` when absent; raises on a
-/// present-but-non-number value. JSON numbers are truncated to `Int`.
-fn int_field(
-  obj : Map[String, Json],
-  key : String,
-  default : Int,
-) -> Int raise ConfigError {
-  match obj.get(key) {
-    Some(Number(n, ..)) => n.to_int()
-    Some(_) => raise ConfigError(key + " must be a JSON number")
-    None => default
-  }
 }

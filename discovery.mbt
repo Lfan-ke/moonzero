@@ -338,17 +338,25 @@ fn int64_of_decimal(s : String) -> Int64 {
 
 ///|
 /// The choice of balancer for a load-balanced channel: round-robin cycles through
-/// the resolved instances (spreading load), `PickFirst` pins the head instance
+/// the resolved instances (spreading load evenly), `WeightedBalancer` shares them
+/// out in proportion to `Endpoint::weight`, `PickFirst` pins the head instance
 /// (← gRPC's `pick_first`).
 pub(all) enum Balancer {
   RoundRobinBalancer(RoundRobin)
   PickFirst
+  WeightedBalancer(WeightedRoundRobin)
 }
 
 ///|
 /// A round-robin balancer, cursor at the first instance.
 pub fn Balancer::round_robin() -> Balancer {
   RoundRobinBalancer(RoundRobin::new())
+}
+
+///|
+/// A weighted balancer, with no credit accrued yet.
+pub fn Balancer::weighted() -> Balancer {
+  WeightedBalancer(WeightedRoundRobin::new())
 }
 
 ///|
@@ -360,6 +368,7 @@ pub fn Balancer::pick(
   match self {
     RoundRobinBalancer(rr) => rr.pick(endpoints)
     PickFirst => pick_first(endpoints)
+    WeightedBalancer(wrr) => wrr.pick(endpoints)
   }
 }
 

@@ -18,6 +18,8 @@ pub fn base64url_encode(Bytes) -> String
 
 pub fn breaker(Breaker) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
 
+pub fn canonical_key(String) -> String
+
 pub fn constant_time_eq(Bytes, Bytes) -> Bool
 
 pub fn consul_check_id(String) -> String
@@ -53,6 +55,8 @@ pub fn jwt_sign(Map[String, Json], String) -> String
 pub fn jwt_verify(String, String, Int64) -> Map[String, Json] raise JwtError
 
 pub fn logging(async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+
+pub let logx : Logger
 
 pub fn max_conns(MaxConns) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
 
@@ -98,17 +102,23 @@ pub fn resp_encode_command(Array[Bytes]) -> Bytes
 
 pub fn resp_kind(RespValue) -> String
 
+pub fn set_log_level(LogLevel) -> Unit
+
+pub fn set_log_writer((String) -> Unit) -> Unit
+
 pub fn sha256(Bytes) -> Bytes
+
+pub fn shedding(Shedder) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
 
 pub fn status_of_code(Int) -> @moonrpc.Status
 
-pub fn structured_logging(Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub fn structured_logging(Clock, logger? : Logger) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
 
 pub fn timeout(Int64, Clock) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
 
 pub let token_script : String
 
-pub fn tracing(header? : String) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+pub fn tracing(header? : String, ignore_paths? : Array[String]) -> (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
 
 pub fn yaml_parse(String) -> Json raise ConfigError
 
@@ -151,9 +161,11 @@ pub suberror Unavailable
 pub(all) enum Balancer {
   RoundRobinBalancer(RoundRobin)
   PickFirst
+  WeightedBalancer(WeightedRoundRobin)
 }
 pub fn Balancer::pick(Self, Array[Endpoint]) -> Endpoint?
 pub fn Balancer::round_robin() -> Self
+pub fn Balancer::weighted() -> Self
 
 pub struct BidiCall {
   channel : RpcChannel
@@ -193,6 +205,20 @@ pub struct Clock {
 }
 pub fn Clock::new(() -> Int64) -> Self
 pub fn Clock::now(Self) -> Int64
+pub fn Clock::system() -> Self
+
+pub struct Conf {
+  root : Map[String, Json]
+}
+pub fn Conf::at(Self, String) -> Json?
+pub fn Conf::bool(Self, String, default? : Bool, env? : String, also? : Array[String]) -> Bool raise ConfigError
+pub fn Conf::int(Self, String, default? : Int, range? : String, env? : String, also? : Array[String]) -> Int raise ConfigError
+pub fn Conf::int64(Self, String, default? : Int64, range? : String, env? : String, also? : Array[String]) -> Int64 raise ConfigError
+pub fn Conf::list(Self, String) -> Array[Self] raise ConfigError
+pub fn Conf::of_json(String) -> Self raise ConfigError
+pub fn Conf::of_yaml(String) -> Self raise ConfigError
+pub fn Conf::string(Self, String, default? : String, options? : Array[String], env? : String, also? : Array[String]) -> String raise ConfigError
+pub fn Conf::strings(Self, String, default? : Array[String], env? : String, also? : Array[String]) -> Array[String] raise ConfigError
 
 pub struct ConsulClient {
   http : &ConsulHttp
@@ -457,6 +483,11 @@ pub fn InMemoryRegistry::resolver(Self) -> (String) -> Array[Endpoint]
 pub fn InMemoryRegistry::revision(Self) -> Int64
 pub fn InMemoryRegistry::services(Self) -> Array[String]
 
+pub(all) struct Layer {
+  name : String
+  middleware : (async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit) -> async (@moonasgi.Scope, async () -> @moonasgi.Event, async (@moonasgi.Event) -> Unit) -> Unit
+}
+
 pub struct LoadBalancedChannel {
   resolve : (String) -> Array[Endpoint]
   cluster : RpcCluster
@@ -468,6 +499,14 @@ pub fn LoadBalancedChannel::call_bidi_streaming(Self, String, Array[Bytes]) -> R
 pub fn LoadBalancedChannel::call_server_streaming(Self, String, Bytes) -> Result[Array[Bytes], @moonrpc.Status] raise
 pub fn LoadBalancedChannel::new((String) -> Array[Endpoint], RpcCluster, String, balancer? : Balancer) -> Self
 
+pub(all) struct LogField {
+  key : String
+  value : Json
+}
+pub fn LogField::new(String, Json) -> Self
+pub fn LogField::num(String, Double) -> Self
+pub fn LogField::str(String, String) -> Self
+
 pub(all) enum LogLevel {
   Debug
   Info
@@ -477,6 +516,25 @@ pub(all) enum LogLevel {
 pub fn LogLevel::parse(String) -> Self
 pub fn LogLevel::to_string(Self) -> String
 pub impl @json.FromJson for LogLevel
+
+type LogState
+
+pub struct Logger {
+  state : LogState
+  clock : Clock
+  duration_ms : Int64?
+}
+pub fn Logger::debug(Self, String, fields? : Array[LogField]) -> Unit
+pub fn Logger::enabled(Self, LogLevel) -> Bool
+pub fn Logger::error(Self, String, fields? : Array[LogField]) -> Unit
+pub fn Logger::info(Self, String, fields? : Array[LogField]) -> Unit
+pub fn Logger::level(Self) -> LogLevel
+pub fn Logger::log(Self, LogLevel, String, fields? : Array[LogField]) -> Unit
+pub fn Logger::new(Clock, level? : LogLevel, writer? : (String) -> Unit) -> Self
+pub fn Logger::set_level(Self, LogLevel) -> Unit
+pub fn Logger::set_writer(Self, (String) -> Unit) -> Unit
+pub fn Logger::severe(Self, String, fields? : Array[LogField]) -> Unit
+pub fn Logger::with_duration(Self, Int64) -> Self
 
 pub struct ManualClock {
   mut ms : Int64
@@ -493,6 +551,21 @@ pub fn MaxConns::in_flight(Self) -> Int
 pub fn MaxConns::new(Int) -> Self
 pub fn MaxConns::release(Self) -> Unit
 pub fn MaxConns::try_acquire(Self) -> Bool
+
+pub(all) struct MiddlewaresConf {
+  trace : Bool
+  log : Bool
+  prometheus : Bool
+  max_conns : Bool
+  breaker : Bool
+  shedding : Bool
+  timeout : Bool
+  recover : Bool
+  metrics : Bool
+  max_bytes : Bool
+  gunzip : Bool
+} derive(Eq, @debug.Debug)
+pub fn MiddlewaresConf::new(trace? : Bool, log? : Bool, prometheus? : Bool, max_conns? : Bool, breaker? : Bool, shedding? : Bool, timeout? : Bool, recover? : Bool, metrics? : Bool, max_bytes? : Bool, gunzip? : Bool) -> Self
 
 pub(all) enum Outcome {
   Succ
@@ -534,6 +607,11 @@ pub fn PersistentRegistry::revision(Self) -> Int64
 pub fn PersistentRegistry::services(Self) -> Array[String]
 pub fn PersistentRegistry::snapshot(Self) -> String
 pub fn PersistentRegistry::watch(Self, (RegistryEvent) -> Unit) -> Unit
+
+pub(all) struct PrivateKeyConf {
+  fingerprint : String
+  key_file : String
+} derive(Eq, @debug.Debug)
 
 pub struct Promise {
   b : Breaker
@@ -617,6 +695,7 @@ pub(all) struct RequestLog {
   client_ip : String
   user_agent : String
 }
+pub fn RequestLog::fields(Self) -> Array[LogField]
 pub fn RequestLog::render(Self) -> String
 pub fn RequestLog::to_json(Self) -> Json
 
@@ -645,6 +724,42 @@ pub(all) enum RespValue {
   Push(Array[RespValue])
 } derive(Eq, @debug.Debug)
 pub fn RespValue::decode(Bytes) -> Self raise RespError
+
+pub(all) struct RestConf {
+  service : ServiceConf
+  cert_file : String
+  key_file : String
+  verbose : Bool
+  max_conns : Int
+  max_bytes : Int
+  cpu_threshold : Int64
+  signature : SignatureConf
+  middlewares : MiddlewaresConf
+  trace_ignore_paths : Array[String]
+}
+pub fn RestConf::from_json(String) -> Self raise ConfigError
+pub fn RestConf::from_yaml(String) -> Self raise ConfigError
+pub fn RestConf::host(Self) -> String
+pub fn RestConf::new(service? : ServiceConf, cert_file? : String, key_file? : String, verbose? : Bool, max_conns? : Int, max_bytes? : Int, cpu_threshold? : Int64, signature? : SignatureConf, middlewares? : MiddlewaresConf, trace_ignore_paths? : Array[String]) -> Self
+pub fn RestConf::port(Self) -> Int
+pub fn RestConf::timeout_ms(Self) -> Int
+pub fn RestConf::tls(Self) -> Bool
+
+pub struct RestEngine {
+  conf : RestConf
+  clock : Clock
+  logger : Logger
+  metrics : ServerMetrics
+  conns : MaxConns
+  circuit : Breaker
+  shedder : Shedder
+}
+pub fn RestEngine::build(Self, @moonapi.App) -> Server
+pub fn RestEngine::conf(Self) -> RestConf
+pub fn RestEngine::layers(Self) -> Array[Layer]
+pub fn RestEngine::metrics(Self) -> ServerMetrics
+pub fn RestEngine::names(Self) -> Array[String]
+pub fn RestEngine::new(RestConf, clock? : Clock, logger? : Logger, metrics? : ServerMetrics, usage? : () -> Int64) -> Self raise ConfigError
 
 pub struct RoundRobin {
   mut cursor : Int
@@ -743,6 +858,14 @@ pub fn ServiceConf::from_json(String) -> Self raise ConfigError
 pub fn ServiceConf::from_yaml(String) -> Self raise ConfigError
 pub fn ServiceConf::new(name? : String, host? : String, port? : Int, timeout_ms? : Int, log_level? : LogLevel) -> Self
 
+pub struct Shedder {
+  threshold : Int64
+  usage : () -> Int64
+}
+pub fn Shedder::allow(Self) -> Bool
+pub fn Shedder::new(Int64, usage? : () -> Int64) -> Self
+pub fn Shedder::usage(Self) -> Int64
+
 pub struct ShutdownCoordinator {
   mut shutting_down : Bool
   mut in_flight : Int
@@ -754,6 +877,13 @@ pub fn ShutdownCoordinator::initiate_shutdown(Self) -> Unit
 pub fn ShutdownCoordinator::is_drained(Self) -> Bool
 pub fn ShutdownCoordinator::is_shutting_down(Self) -> Bool
 pub fn ShutdownCoordinator::new() -> Self
+
+pub(all) struct SignatureConf {
+  strict : Bool
+  expiry_ms : Int64
+  private_keys : Array[PrivateKeyConf]
+} derive(Eq, @debug.Debug)
+pub fn SignatureConf::new(strict? : Bool, expiry_ms? : Int64, private_keys? : Array[PrivateKeyConf]) -> Self
 
 pub struct TokenBucket {
   capacity : Double
@@ -774,6 +904,12 @@ pub(all) struct TraceContext {
 pub fn TraceContext::span_id(Self) -> String
 pub fn TraceContext::to_traceparent(Self) -> String
 pub fn TraceContext::trace_id(Self) -> String
+
+pub struct WeightedRoundRobin {
+  scores : Map[String, Int]
+}
+pub fn WeightedRoundRobin::new() -> Self
+pub fn WeightedRoundRobin::pick(Self, Array[Endpoint]) -> Endpoint?
 
 pub struct Window {
   size : Int

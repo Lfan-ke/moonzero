@@ -1,8 +1,8 @@
 ///|
 /// A service endpoint (← go-zero's `discov` target): the host and port an
-/// instance listens on, plus a routing weight (default `1`). It is carried through registration and
-/// snapshots for a weighted balancer; the balancers shipping today — round-robin and
-/// pick-first — do not read it yet.
+/// instance listens on, plus a routing weight (default `1`). The weight is
+/// carried through registration and snapshots and is what `WeightedRoundRobin`
+/// shares traffic by; round-robin and pick-first ignore it.
 pub(all) struct Endpoint {
   host : String
   port : Int
@@ -149,6 +149,72 @@ pub fn RoundRobin::pick(
   let idx = self.cursor % n
   self.cursor = (self.cursor + 1) % n
   Some(endpoints[idx])
+}
+
+///|
+/// A weighted balancer over `Endpoint::weight`, using smooth weighted
+/// round-robin: every pick credits each instance with its own weight, serves the
+/// highest-credited one, then charges it the total weight of the set. Across one
+/// full cycle each instance is served exactly its share of the traffic, and the
+/// picks interleave instead of arriving in runs — a weight-5 instance is not
+/// handed five requests back to back.
+///
+/// Credit is keyed by `address()`, so an instance that leaves and returns
+/// resumes where it was rather than jumping the queue, and two instances sharing
+/// an address are treated as one. An instance whose weight is zero or negative is
+/// never picked; a set where every weight is non-positive yields `None`.
+pub struct WeightedRoundRobin {
+  scores : Map[String, Int]
+}
+
+///|
+/// A weighted balancer with no credit accrued yet.
+pub fn WeightedRoundRobin::new() -> WeightedRoundRobin {
+  { scores: Map([]), }
+}
+
+///|
+/// Pick the next endpoint in weight order, or `None` if nothing is eligible.
+pub fn WeightedRoundRobin::pick(
+  self : WeightedRoundRobin,
+  endpoints : Array[Endpoint],
+) -> Endpoint? {
+  let live : Array[Endpoint] = []
+  let keys : Array[String] = []
+  let mut total = 0
+  for e in endpoints {
+    if e.weight > 0 {
+      live.push(e)
+      keys.push(e.address())
+      total = total + e.weight
+    }
+  }
+  if live.length() == 0 {
+    return None
+  }
+  let mut best = 0
+  let mut best_score = 0
+  for i = 0; i < live.length(); i = i + 1 {
+    let score = self.scores.get(keys[i]).unwrap_or(0) + live[i].weight
+    self.scores[keys[i]] = score
+    if i == 0 || score > best_score {
+      best = i
+      best_score = score
+    }
+  }
+  // credit for an instance no longer in the set would resurface stale on its
+  // return, long after the weights it was earned under changed
+  let stale : Array[String] = []
+  for key, _ in self.scores {
+    if !keys.contains(key) {
+      stale.push(key)
+    }
+  }
+  for key in stale {
+    self.scores.remove(key)
+  }
+  self.scores[keys[best]] = best_score - total
+  Some(live[best])
 }
 
 ///|

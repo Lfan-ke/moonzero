@@ -5,6 +5,7 @@ import {
   "Lfan-ke/moonapi",
   "Lfan-ke/moonasgi",
   "Lfan-ke/moonrpc",
+  "moonbitlang/core/env",
   "moonbitlang/core/json",
   "moonbitlang/core/encoding/base64",
   "moonbitlang/core/encoding/utf8",

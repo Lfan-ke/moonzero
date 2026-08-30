@@ -38,6 +38,19 @@ pub fn RequestLog::render(self : RequestLog) -> String {
 }
 
 ///|
+/// The record as `logx` fields, for logging it through a `Logger` — the method
+/// and path make the entry's message, so they are not repeated here.
+pub fn RequestLog::fields(self : RequestLog) -> Array[LogField] {
+  [
+    LogField::num("status", self.status.to_double()),
+    LogField::num("duration_ms", self.duration_ms.to_double()),
+    LogField::str("request_id", self.request_id),
+    LogField::str("client_ip", self.client_ip),
+    LogField::str("user_agent", self.user_agent),
+  ]
+}
+
+///|
 /// The client IP from an HTTP scope: the `X-Forwarded-For` first hop if present
 /// (proxy-aware, as go-zero's `httpx.GetRemoteAddr`), else the transport peer
 /// from the scope's `client`, else `"-"`.
@@ -87,10 +100,12 @@ fn header_ci(
 ///|
 /// Structured-logging middleware (← go-zero's `LogHandler`): time each HTTP
 /// request on the shared clock, capture its method/path/client-ip/user-agent and
-/// the response status observed on `HttpResponseStart`, and print one
-/// `RequestLog` JSON line when the response starts. Non-HTTP scopes pass through
-/// without logging.
-pub fn structured_logging(clock : Clock) -> Middleware {
+/// the response status observed on `HttpResponseStart`, and write one access
+/// entry through `logger` (the process `logx` by default) when the response
+/// starts. Access logs are `info`, so a service configured at `error` or above
+/// emits none of them. Non-HTTP scopes pass through without logging.
+pub fn structured_logging(clock : Clock, logger? : Logger) -> Middleware {
+  let lg = logger.unwrap_or(logx)
   inner => {
     (scope, receive, send) => {
       match scope {
@@ -116,7 +131,9 @@ pub fn structured_logging(clock : Clock) -> Middleware {
                     client_ip: ip,
                     user_agent: ua,
                   }
-                  println(entry.render())
+                  lg
+                  .with_duration(entry.duration_ms)
+                  .info(verb + " " + path, fields=entry.fields())
                 }
                 send(
                   @moonasgi.Event::HttpResponseStart(

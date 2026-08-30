@@ -22,6 +22,14 @@ pub fn Clock::now(self : Clock) -> Int64 {
 }
 
 ///|
+/// The platform clock, in milliseconds since the Unix epoch (← go-zero's
+/// `timex.Now()`). Every backend can read it, so a service that has no reason to
+/// inject its own time source can take this one.
+pub fn Clock::system() -> Clock {
+  Clock::new(() => @env.now().reinterpret_as_int64())
+}
+
+///|
 /// A deterministic, hand-advanced clock for tests and for driving the rate-limit
 /// / breaker cores without a real time source. Wall time is replaced by an
 /// explicit `advance`, so a token bucket's refill or a breaker's open window can
